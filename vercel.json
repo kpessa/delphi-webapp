@@ -1,12 +1,4 @@
 {
   "buildCommand": "pnpm build",
-  "outputDirectory": ".vercel/output",
-  "framework": "sveltekit",
-  "installCommand": "pnpm install",
-  "regions": ["iad1"],
-  "functions": {
-    "src/routes/**/*.js": {
-      "maxDuration": 10
-    }
-  }
+  "installCommand": "pnpm install"
 }
