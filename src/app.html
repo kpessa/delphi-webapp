@@ -2,7 +2,9 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" href="%sveltekit.assets%/favicon.svg" />
+		<!-- Favicon with dark mode support -->
+		<link rel="icon" href="%sveltekit.assets%/favicon.ico" media="(prefers-color-scheme: light)" />
+		<link rel="icon" href="%sveltekit.assets%/favicon-dark.ico" media="(prefers-color-scheme: dark)" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		
 		<!-- PWA Configuration -->
@@ -10,7 +12,7 @@
 		<meta name="theme-color" content="#000000" />
 		
 		<!-- iOS PWA Support -->
-		<link rel="apple-touch-icon" href="%sveltekit.assets%/icons/icon-192x192.png" />
+		<link rel="apple-touch-icon" href="%sveltekit.assets%/icons/apple-touch-icon.png" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="apple-mobile-web-app-title" content="Delphi Healthcare" />
