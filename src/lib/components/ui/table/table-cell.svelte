@@ -1,0 +1,16 @@
+<script lang="ts">
+	import type { HTMLTdAttributes } from "svelte/elements";
+	import { cn } from "$lib/utils";
+
+	type $$Props = HTMLTdAttributes;
+
+	let className: string | undefined | null = undefined;
+	export { className as class };
+</script>
+
+<td
+	class={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)}
+	{...$$restProps}
+>
+	<slot />
+</td>
