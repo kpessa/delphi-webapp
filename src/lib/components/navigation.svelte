@@ -33,7 +33,7 @@
 						class="h-8 w-auto"
 					/>
 				{/if}
-				<span class="font-semibold">Delphi Webapp</span>
+				<span class="font-semibold">Delphi Platform</span>
 			</a>
 			
 			{#if authStore.isAuthenticated}
@@ -45,10 +45,10 @@
 						Dashboard
 					</a>
 					<a
-						href="/items"
+						href="/topics"
 						class="transition-colors hover:text-foreground/80 text-foreground/60"
 					>
-						Items
+						Topics
 					</a>
 				</nav>
 			{/if}

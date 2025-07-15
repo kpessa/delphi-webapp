@@ -1,7 +1,7 @@
 {
-  "name": "Delphi Healthcare Platform",
+  "name": "Delphi Platform",
   "short_name": "Delphi",
-  "description": "Healthcare decision-making platform using the Delphi technique",
+  "description": "Anonymous group feedback platform using the Delphi technique",
   "icons": [
     {
       "src": "icons/favicon-16x16.png",
@@ -112,5 +112,5 @@
   "theme_color_dark": "#ffffff",
   "background_color_dark": "#000000",
   "orientation": "portrait-primary",
-  "categories": ["business", "medical", "productivity"]
+  "categories": ["business", "productivity", "social"]
 }
