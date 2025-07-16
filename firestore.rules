@@ -16,7 +16,12 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid in itemData.expertIds;
     }
     
-    // Rules for items collection
+    // Helper function to check if user is owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Rules for items collection (LEGACY - keep for backward compatibility)
     match /items/{itemId} {
       // Allow read if user is authenticated and is either admin or expert
       allow read: if isAuthenticated() && 
@@ -38,13 +43,11 @@ service cloud.firestore {
     // Rules for rounds collection
     match /rounds/{roundId} {
       allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated() && 
-        exists(/databases/$(database)/documents/items/$(request.resource.data.itemId)) &&
-        request.auth.uid in get(/databases/$(database)/documents/items/$(request.resource.data.itemId)).data.adminIds;
+      allow create, update: if isAuthenticated();
       allow delete: if false; // Rounds should not be deleted
     }
     
-    // Rules for responses collection
+    // Rules for responses collection (LEGACY)
     match /responses/{responseId} {
       // Experts can create and read their own responses
       allow create: if isAuthenticated() && 
@@ -59,6 +62,118 @@ service cloud.firestore {
     match /aggregations/{aggregationId} {
       allow read: if isAuthenticated();
       allow write: if false; // Only cloud functions should write aggregations
+    }
+    
+    // Helper function to check if user is admin of a panel
+    function isPanelAdmin(panelData) {
+      return isAuthenticated() && request.auth.uid in panelData.adminIds;
+    }
+    
+    // Helper function to check if user is expert in a panel
+    function isPanelExpert(panelData) {
+      return isAuthenticated() && request.auth.uid in panelData.expertIds;
+    }
+    
+    // NEW TOPICS SYSTEM RULES
+    
+    // Topics collection
+    match /topics/{topicId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.creatorId == request.auth.uid || 
+        // Allow panel experts to update if they have access to the panel
+        exists(/databases/$(database)/documents/panels/$(resource.data.panelId))
+      );
+      allow delete: if isAuthenticated() && resource.data.creatorId == request.auth.uid;
+    }
+    
+    // Panels collection (UPDATED for new system)
+    match /panels/{panelId} {
+      // Allow read if user is authenticated
+      allow read: if isAuthenticated();
+      
+      // Allow create if user is authenticated
+      allow create: if isAuthenticated();
+      
+      // Allow update if user is creator or expert in the panel
+      allow update: if isAuthenticated() && (
+        resource.data.creatorId == request.auth.uid ||
+        request.auth.uid in resource.data.expertIds ||
+        // Legacy support for adminIds
+        (resource.data.keys().hasAny(['adminIds']) && request.auth.uid in resource.data.adminIds)
+      );
+      
+      // Allow delete if user is creator or admin
+      allow delete: if isAuthenticated() && (
+        resource.data.creatorId == request.auth.uid ||
+        (resource.data.keys().hasAny(['adminIds']) && request.auth.uid in resource.data.adminIds)
+      );
+    }
+    
+    // Experts collection (UPDATED for new system)
+    match /experts/{expertId} {
+      // Allow read if user is authenticated
+      allow read: if isAuthenticated();
+      
+      // Allow create if user is authenticated
+      allow create: if isAuthenticated();
+      
+      // Allow update if user invited the expert, is the expert themselves, or email matches
+      allow update: if isAuthenticated() && (
+        resource.data.invitedBy == request.auth.uid ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.email == request.auth.token.email ||
+        // Legacy support for uid field
+        (resource.data.keys().hasAny(['uid']) && request.auth.uid == resource.data.uid)
+      );
+      
+      // Allow delete if user invited the expert or legacy uid match
+      allow delete: if isAuthenticated() && (
+        resource.data.invitedBy == request.auth.uid ||
+        (resource.data.keys().hasAny(['uid']) && request.auth.uid == resource.data.uid)
+      );
+    }
+    
+    // Feedback collection (NEW)
+    match /feedback/{feedbackId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.expertId == request.auth.uid ||
+        // Only allow voting updates by other users
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['voteCount', 'votedBy', 'updatedAt']))
+      );
+      allow delete: if isAuthenticated() && resource.data.expertId == request.auth.uid;
+    }
+    
+    // Panel invitations collection (LEGACY - keep for backward compatibility)
+    match /panelInvitations/{invitationId} {
+      // Allow read if user is authenticated
+      allow read: if isAuthenticated();
+      
+      // Allow create if user is admin of the panel being invited to
+      allow create: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/panels/$(request.resource.data.panelId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/panels/$(request.resource.data.panelId)).data.adminIds;
+      
+      // Allow update only to accept/decline invitation
+      allow update: if isAuthenticated() && 
+        resource.data.status == 'pending' &&
+        request.resource.data.status in ['accepted', 'declined'];
+      
+      // Allow delete if user is admin of the panel
+      allow delete: if isAuthenticated() && 
+        exists(/databases/$(database)/documents/panels/$(resource.data.panelId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/panels/$(resource.data.panelId)).data.adminIds;
+    }
+    
+    // Users collection (for profile data)
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false; // Users should not be deleted
     }
   }
 }

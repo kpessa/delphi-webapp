@@ -1,12 +1,12 @@
 {
   "indexes": [
     {
-      "collectionGroup": "items",
+      "collectionGroup": "topics",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "adminIds",
-          "arrayConfig": "CONTAINS"
+          "fieldPath": "panelId",
+          "order": "ASCENDING"
         },
         {
           "fieldPath": "createdAt",
@@ -15,15 +15,67 @@
       ]
     },
     {
-      "collectionGroup": "items",
+      "collectionGroup": "topics",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "expertIds",
-          "arrayConfig": "CONTAINS"
+          "fieldPath": "creatorId",
+          "order": "ASCENDING"
         },
         {
-          "fieldPath": "status",
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "feedback",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "topicId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "feedback",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "roundId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "panels",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "creatorId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "experts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "panelId",
           "order": "ASCENDING"
         },
         {

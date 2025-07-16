@@ -2,15 +2,15 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import OpenAI from 'openai';
 import cors from 'cors';
-import type { ExtractTopicRequest, ExtractTopicResponse, FeedbackType } from '../../src/lib/firebase/types';
+import type { ExtractTopicRequest, ExtractTopicResponse, FeedbackType } from './types';
 
 // Initialize Firebase Admin
 admin.initializeApp();
 
 // Initialize OpenAI
-const openai = new OpenAI({
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+}) : null;
 
 // Enable CORS
 const corsHandler = cors({ origin: true });
@@ -30,6 +30,12 @@ export const extractTopic = functions.https.onRequest(async (req, res) => {
         await admin.auth().verifyIdToken(idToken);
       } catch (error) {
         res.status(401).json({ error: 'Invalid token' });
+        return;
+      }
+
+      // Check if OpenAI is available
+      if (!openai) {
+        res.status(503).json({ error: 'OpenAI service not configured' });
         return;
       }
 
@@ -68,7 +74,7 @@ Respond in JSON format with this structure:
 }`;
 
       // Call OpenAI
-      const completion = await openai.chat.completions.create({
+      const completion = await openai!.chat.completions.create({
         model: 'gpt-4-turbo-preview',
         messages: [
           { role: 'system', content: systemPrompt },
@@ -119,6 +125,12 @@ export const generateRoundSummary = functions.https.onRequest(async (req, res) =
         return;
       }
 
+      // Check if OpenAI is available
+      if (!openai) {
+        res.status(503).json({ error: 'OpenAI service not configured' });
+        return;
+      }
+
       const { topicId, roundNumber } = req.body;
 
       // Fetch feedback from Firestore
@@ -138,7 +150,7 @@ export const generateRoundSummary = functions.https.onRequest(async (req, res) =
       // Create summary prompt
       const feedbackText = feedback.map(f => `${f.type}: ${f.content}`).join('\n');
       
-      const completion = await openai.chat.completions.create({
+      const completion = await openai!.chat.completions.create({
         model: 'gpt-4-turbo-preview',
         messages: [
           {
