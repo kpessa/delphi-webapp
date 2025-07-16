@@ -42,12 +42,7 @@ class NotificationsStore {
 
     try {
       // Load user preferences (don't fail if missing)
-      try {
-        this.preferences = await getPreferences(user.uid);
-      } catch (error) {
-        console.log('No notification preferences found for user, using defaults');
-        this.preferences = null;
-      }
+      this.preferences = await getPreferences(user.uid);
       
       // Load initial notifications
       const initialNotifications = await getNotifications(user.uid, 20);

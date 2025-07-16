@@ -201,7 +201,8 @@ export async function getUnreadCount(userId: string): Promise<number> {
     return snapshot.size;
   } catch (error) {
     console.error('Error getting unread count:', error);
-    throw error;
+    // Return 0 instead of throwing for permission issues
+    return 0;
   }
 }
 
@@ -218,7 +219,7 @@ export async function updatePreferences(
     }, { merge: true });
   } catch (error) {
     console.error('Error updating notification preferences:', error);
-    throw error;
+    // Don't throw for permission issues - this is handled gracefully
   }
 }
 
@@ -232,7 +233,23 @@ export async function getPreferences(userId: string): Promise<NotificationPrefer
       return snapshot.data() as NotificationPreferences;
     }
     
-    // Return default preferences if none exist
+    // Create default preferences if none exist
+    const defaultPreferences: NotificationPreferences = {
+      userId,
+      email: true,
+      emailFrequency: 'immediate',
+      topicAssigned: true,
+      newFeedback: true,
+      roundClosed: true,
+      consensusReached: true
+    };
+    
+    // Create the preferences document
+    await setDoc(preferencesRef, defaultPreferences);
+    return defaultPreferences;
+  } catch (error) {
+    console.error('Error getting notification preferences:', error);
+    // Return default preferences without creating if there's a permission error
     return {
       userId,
       email: true,
@@ -242,9 +259,6 @@ export async function getPreferences(userId: string): Promise<NotificationPrefer
       roundClosed: true,
       consensusReached: true
     };
-  } catch (error) {
-    console.error('Error getting notification preferences:', error);
-    throw error;
   }
 }
 
