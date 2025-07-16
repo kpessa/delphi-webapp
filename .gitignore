@@ -28,3 +28,4 @@ pglite-debug.log
 
 # Windows Zone.Identifier files
 *Zone.Identifier
+functions/.runtimeconfig.json

@@ -149,18 +149,32 @@ service cloud.firestore {
     
     // Panel invitations collection (LEGACY - keep for backward compatibility)
     match /panelInvitations/{invitationId} {
-      // Allow read if user is authenticated
-      allow read: if isAuthenticated();
+      // Allow read if user is authenticated AND either:
+      // - User is admin of the panel
+      // - User's email matches the invitation email
+      // - User created the invitation
+      allow read: if isAuthenticated() && (
+        (exists(/databases/$(database)/documents/panels/$(resource.data.panelId)) &&
+         request.auth.uid in get(/databases/$(database)/documents/panels/$(resource.data.panelId)).data.adminIds) ||
+        (request.auth.token.email != null && 
+         request.auth.token.email == resource.data.email) ||
+        request.auth.uid == resource.data.invitedBy
+      );
       
       // Allow create if user is admin of the panel being invited to
       allow create: if isAuthenticated() && 
         exists(/databases/$(database)/documents/panels/$(request.resource.data.panelId)) &&
         request.auth.uid in get(/databases/$(database)/documents/panels/$(request.resource.data.panelId)).data.adminIds;
       
-      // Allow update only to accept/decline invitation
-      allow update: if isAuthenticated() && 
-        resource.data.status == 'pending' &&
-        request.resource.data.status in ['accepted', 'declined'];
+      // Allow update to accept/decline invitation or if user is admin
+      allow update: if isAuthenticated() && (
+        // Allow accepting/declining your own invitation
+        (resource.data.status == 'pending' &&
+         request.resource.data.status in ['accepted', 'declined']) ||
+        // Allow admins to update invitations (for resending, canceling, etc)
+        (exists(/databases/$(database)/documents/panels/$(resource.data.panelId)) &&
+         request.auth.uid in get(/databases/$(database)/documents/panels/$(resource.data.panelId)).data.adminIds)
+      );
       
       // Allow delete if user is admin of the panel
       allow delete: if isAuthenticated() && 

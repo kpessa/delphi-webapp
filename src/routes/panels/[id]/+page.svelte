@@ -17,15 +17,17 @@
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { getPanel, addExpertToPanel, removeExpertFromPanel, type Panel } from '$lib/firebase/panels';
 	import { getExpertsByPanel, createExpert, deleteExpert, type Expert } from '$lib/firebase/experts';
+	import { sendBulkInvitations, getInvitationsByPanel, resendInvitation, cancelInvitation, type PanelInvitation } from '$lib/firebase/invitations';
 	import { toast } from 'svelte-sonner';
 	import { ArrowLeft, Edit, UserPlus, UserCheck, UserX, Mail, CheckCircle, Clock, XCircle } from 'lucide-svelte';
 	
 	let panel: Panel | null = null;
 	let experts: Expert[] = [];
-	// let invitations: PanelInvitation[] = []; // TODO: Implement invitations feature
+	let invitations: PanelInvitation[] = [];
 	let loading = true;
 	let showInviteDialog = false;
 	let inviteEmails = '';
+	let inviteMessage = '';
 	let inviting = false;
 
 	$: panelId = $page.params.id;
@@ -55,8 +57,8 @@
 
 			// Load experts for this panel
 			experts = await getExpertsByPanel(panelId);
-			// TODO: Load invitations when implemented
-			// invitations = await getInvitationsByPanel(panelId);
+			// Load invitations
+			invitations = await getInvitationsByPanel(panelId);
 		} catch (error) {
 			console.error('Error loading panel data:', error);
 			goto('/panels');
@@ -66,9 +68,6 @@
 	}
 
 	async function handleInviteExperts() {
-		// TODO: Implement invitation functionality
-		alert('Invitation functionality is not yet implemented.');
-		/*
 		if (!panel || !authStore.user || !inviteEmails.trim()) return;
 
 		try {
@@ -79,30 +78,37 @@
 				.filter(e => e && e.includes('@'));
 
 			if (emails.length === 0) {
-				alert('Please enter valid email addresses');
+				toast.error('Please enter valid email addresses');
 				return;
 			}
 
-			// TODO: Implement sendBulkInvitations
 			const result = await sendBulkInvitations(
 				emails,
 				panelId,
 				panel.name,
-				authStore.user.uid
+				authStore.user.uid,
+				authStore.user.displayName || authStore.user.email || 'Panel Administrator',
+				inviteMessage || undefined
 			);
 
-			alert(`Sent ${result.sent} invitation(s). ${result.failed.length > 0 ? `Failed: ${result.failed.join(', ')}` : ''}`);
+			if (result.sent > 0) {
+				toast.success(`Sent ${result.sent} invitation(s) successfully`);
+			}
+			
+			if (result.failed.length > 0) {
+				toast.error(`Failed to send to: ${result.failed.join(', ')}`);
+			}
 			
 			inviteEmails = '';
+			inviteMessage = '';
 			showInviteDialog = false;
 			await loadPanelData();
 		} catch (error) {
 			console.error('Error sending invitations:', error);
-			alert('Failed to send invitations. Please try again.');
+			toast.error('Failed to send invitations. Please try again.');
 		} finally {
 			inviting = false;
 		}
-		*/
 	}
 
 	async function joinAsExpert() {
@@ -167,9 +173,34 @@
 			case 'accepted':
 				return 'default';
 			case 'declined':
+			case 'expired':
 				return 'destructive';
 			default:
 				return 'secondary';
+		}
+	}
+
+	async function handleResendInvitation(invitationId: string) {
+		try {
+			await resendInvitation(invitationId);
+			toast.success('Invitation resent successfully');
+			await loadPanelData();
+		} catch (error) {
+			console.error('Error resending invitation:', error);
+			toast.error('Failed to resend invitation');
+		}
+	}
+
+	async function handleCancelInvitation(invitationId: string) {
+		if (!confirm('Are you sure you want to cancel this invitation?')) return;
+		
+		try {
+			await cancelInvitation(invitationId);
+			toast.success('Invitation cancelled');
+			await loadPanelData();
+		} catch (error) {
+			console.error('Error cancelling invitation:', error);
+			toast.error('Failed to cancel invitation');
 		}
 	}
 </script>
@@ -280,8 +311,8 @@
 				</div>
 
 				<div class="rounded-lg bg-white p-6 shadow">
-					<h2 class="mb-4 text-lg font-semibold text-gray-900">Invitations (0)</h2>
-					{#if true}
+					<h2 class="mb-4 text-lg font-semibold text-gray-900">Invitations ({invitations.length})</h2>
+					{#if invitations.length === 0}
 						<p class="text-sm text-gray-500">No invitations sent yet.</p>
 					{:else}
 						<Table>
@@ -290,10 +321,13 @@
 									<TableHead>Email</TableHead>
 									<TableHead>Status</TableHead>
 									<TableHead>Sent</TableHead>
+									{#if isAdmin}
+										<TableHead>Actions</TableHead>
+									{/if}
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{#each [] as invitation}
+								{#each invitations as invitation}
 									<TableRow>
 										<TableCell>{invitation.email}</TableCell>
 										<TableCell>
@@ -304,6 +338,28 @@
 										<TableCell>
 											{new Date(invitation.createdAt).toLocaleDateString()}
 										</TableCell>
+										{#if isAdmin}
+											<TableCell>
+												{#if invitation.status === 'pending'}
+													<div class="flex gap-2">
+														<Button
+															size="sm"
+															variant="outline"
+															onclick={() => invitation.id && handleResendInvitation(invitation.id)}
+														>
+															Resend
+														</Button>
+														<Button
+															size="sm"
+															variant="destructive"
+															onclick={() => invitation.id && handleCancelInvitation(invitation.id)}
+														>
+															Cancel
+														</Button>
+													</div>
+												{/if}
+											</TableCell>
+										{/if}
 									</TableRow>
 								{/each}
 							</TableBody>
@@ -355,7 +411,16 @@
 			<Textarea
 				bind:value={inviteEmails}
 				placeholder="expert1@hospital.com, expert2@hospital.com&#10;expert3@hospital.com"
-				rows={5}
+				rows={4}
+				disabled={inviting}
+			/>
+			<p class="mt-2 mb-3 text-sm text-gray-600">
+				Personal Message (Optional)
+			</p>
+			<Textarea
+				bind:value={inviteMessage}
+				placeholder="Add a personal message to include in the invitation email..."
+				rows={3}
 				disabled={inviting}
 			/>
 			<div class="mt-4 flex justify-end gap-2">
