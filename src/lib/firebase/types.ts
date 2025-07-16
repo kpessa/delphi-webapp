@@ -6,9 +6,10 @@ export interface Topic {
   description: string;
   question: string;
   panelId: string;
-  createdBy: string;
-  status: 'open' | 'closed';
+  creatorId: string;
+  status: 'draft' | 'active' | 'completed';
   roundNumber: number;
+  currentRoundId?: string;
   
   // AI extraction fields
   rawInput?: string;
@@ -24,32 +25,47 @@ export type FeedbackType = 'idea' | 'solution' | 'concern' | 'vote' | 'refinemen
 export interface Feedback {
   id?: string;
   topicId: string;
+  panelId: string;
+  expertId: string; // Anonymous to other experts
+  roundId?: string;
   roundNumber: number;
-  expertId: string;
   type: FeedbackType;
   content: string;
-  parentFeedbackId?: string; // For refinements of existing feedback
-  voteCount: number;
-  voters: string[]; // Track who voted to prevent double voting
+  upvotes: string[]; // Array of user IDs who upvoted
+  downvotes: string[]; // Array of user IDs who downvoted
+  parentId?: string | null; // For threading refinements
+  metadata?: {
+    reasoning?: string;
+    refinementCount?: number;
+    [key: string]: any;
+  };
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Panel {
   id?: string;
   name: string;
   description: string;
-  adminIds: string[];
+  creatorId: string;
   expertIds: string[];
+  status: 'active' | 'archived';
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface Expert {
   id?: string;
-  uid: string; // Firebase Auth UID
+  panelId: string;
   email: string;
-  displayName: string;
-  panelIds: string[]; // Many-to-many relationship
+  name: string;
+  organization?: string;
+  expertise?: string;
+  status: 'invited' | 'accepted' | 'declined';
+  invitedBy: string;
+  invitedAt: Date;
+  acceptedAt?: Date;
+  userId?: string; // Linked after accepting invitation
   createdAt: Date;
   updatedAt: Date;
 }
