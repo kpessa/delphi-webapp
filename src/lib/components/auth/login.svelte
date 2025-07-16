@@ -47,14 +47,14 @@
 	}
 </script>
 
-<div class="mx-auto max-w-sm space-y-6">
+<div class="mx-auto max-w-sm space-y-4 md:space-y-6">
 	<div class="space-y-2 text-center">
-		<h1 class="text-3xl font-bold">Sign In</h1>
-		<p class="text-gray-500">Welcome to Delphi Healthcare Decision Platform</p>
+		<h1 class="text-2xl md:text-3xl font-bold">Sign In</h1>
+		<p class="text-sm md:text-base text-muted-foreground">Welcome to Delphi Healthcare Decision Platform</p>
 	</div>
 	
 	{#if error}
-		<div class="rounded-md bg-red-50 p-4 text-sm text-red-800">
+		<div class="rounded-md bg-destructive/10 p-3 md:p-4 text-sm text-destructive">
 			{error}
 		</div>
 	{/if}
@@ -82,7 +82,7 @@
 				<span class="w-full border-t" />
 			</div>
 			<div class="relative flex justify-center text-xs uppercase">
-				<span class="bg-white px-2 text-gray-500">Or</span>
+				<span class="bg-background px-2 text-muted-foreground">Or</span>
 			</div>
 		</div>
 		
@@ -100,7 +100,7 @@
 				<span class="w-full border-t" />
 			</div>
 			<div class="relative flex justify-center text-xs uppercase">
-				<span class="bg-white px-2 text-gray-500">Or sign in with password</span>
+				<span class="bg-background px-2 text-muted-foreground">Or sign in with password</span>
 			</div>
 		</div>
 		
@@ -112,7 +112,7 @@
 					type="email"
 					bind:value={email}
 					required
-					class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+					class="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
 					placeholder="your.email@uhsinc.com"
 				/>
 			</div>
@@ -124,7 +124,7 @@
 					type="password"
 					bind:value={password}
 					required
-					class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+					class="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 shadow-sm focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
 				/>
 			</div>
 			

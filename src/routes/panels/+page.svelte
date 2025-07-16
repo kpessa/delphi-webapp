@@ -50,10 +50,10 @@
 	<title>Panels - Delphi Healthcare Platform</title>
 </svelte:head>
 
-<div class="py-8">
-	<div class="flex items-center justify-between mb-6">
+<div class="py-6 md:py-8">
+	<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
 		<div>
-			<h1 class="text-3xl font-bold">Expert Panels</h1>
+			<h1 class="text-2xl md:text-3xl font-bold">Expert Panels</h1>
 			<p class="mt-1 text-sm text-muted-foreground">
 				Manage groups of experts for anonymous feedback collection
 			</p>
@@ -80,16 +80,16 @@
 				</Button>
 			</div>
 		{:else}
-			<div class="rounded-lg bg-card shadow-sm border">
+			<div class="rounded-lg bg-card shadow-sm border overflow-x-auto">
 				<Table>
 					<TableCaption>Expert panels for Delphi technique feedback</TableCaption>
 					<TableHeader>
 						<TableRow>
-							<TableHead>Name</TableHead>
-							<TableHead>Description</TableHead>
+							<TableHead class="min-w-[150px]">Name</TableHead>
+							<TableHead class="hidden sm:table-cell">Description</TableHead>
 							<TableHead>Experts</TableHead>
-							<TableHead>Your Role</TableHead>
-							<TableHead>Created</TableHead>
+							<TableHead class="hidden md:table-cell">Your Role</TableHead>
+							<TableHead class="hidden lg:table-cell">Created</TableHead>
 							<TableHead class="text-right">Actions</TableHead>
 						</TableRow>
 					</TableHeader>
@@ -97,14 +97,14 @@
 						{#each panels as panel}
 							<TableRow>
 								<TableCell class="font-medium">{panel.name}</TableCell>
-								<TableCell class="max-w-xs truncate">{panel.description}</TableCell>
+								<TableCell class="hidden sm:table-cell max-w-xs truncate">{panel.description}</TableCell>
 								<TableCell>
 									<div class="flex items-center gap-1">
 										<Users class="h-4 w-4 text-gray-500" />
 										<span>{panel.expertIds.length}</span>
 									</div>
 								</TableCell>
-								<TableCell>
+								<TableCell class="hidden md:table-cell">
 									<div class="flex items-center gap-1">
 										{#if isAdmin(panel)}
 											<Badge variant="default">Admin</Badge>
@@ -117,7 +117,7 @@
 										{/if}
 									</div>
 								</TableCell>
-								<TableCell>
+								<TableCell class="hidden lg:table-cell">
 									{new Date(panel.createdAt).toLocaleDateString()}
 								</TableCell>
 								<TableCell class="text-right">
