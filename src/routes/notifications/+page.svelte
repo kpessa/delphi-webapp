@@ -2,11 +2,19 @@
   import { notificationsStore } from '$lib/stores/notifications.svelte';
   import NotificationItem from '$lib/components/notifications/NotificationItem.svelte';
   import { onMount } from 'svelte';
-  import { Bell, Filter, Search, Check, Trash2 } from 'lucide-svelte';
+  import { Bell, Filter, Search, Check, Archive, ArchiveX } from 'lucide-svelte';
   import type { NotificationType } from '$lib/firebase/types';
+  import { format, isToday, isYesterday, isThisWeek, parseISO } from 'date-fns';
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
 
-  let searchQuery = $state('');
-  let selectedType = $state<NotificationType | 'all'>('all');
+  // Initialize from URL params
+  const initialParams = new URLSearchParams($page.url.searchParams);
+  let searchQuery = $state(initialParams.get('search') || '');
+  let selectedType = $state<NotificationType | 'all'>(
+    (initialParams.get('type') as NotificationType | 'all') || 'all'
+  );
+  let showUnreadOnly = $state(initialParams.get('unread') === 'true');
   let selectedNotifications = $state<Set<string>>(new Set());
   
   const notificationTypes: { value: NotificationType | 'all'; label: string }[] = [
@@ -18,8 +26,36 @@
     { value: 'invitation', label: 'Invitations' }
   ];
   
+  // Update URL params when filters change
+  function updateUrlParams() {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set('search', searchQuery);
+    if (selectedType !== 'all') params.set('type', selectedType);
+    if (showUnreadOnly) params.set('unread', 'true');
+    
+    const queryString = params.toString();
+    goto(`/notifications${queryString ? `?${queryString}` : ''}`, { 
+      replaceState: true,
+      keepFocus: true,
+      noScroll: true 
+    });
+  }
+  
+  // Watch for filter changes
+  $effect(() => {
+    searchQuery;
+    selectedType;
+    showUnreadOnly;
+    updateUrlParams();
+  });
+
   const filteredNotifications = $derived(() => {
     let notifications = notificationsStore.notifications;
+    
+    // Filter by read status
+    if (showUnreadOnly) {
+      notifications = notifications.filter(n => !n.read);
+    }
     
     // Filter by type
     if (selectedType !== 'all') {
@@ -36,6 +72,40 @@
     }
     
     return notifications;
+  });
+  
+  // Group notifications by date
+  const groupedNotifications = $derived(() => {
+    const groups: { label: string; notifications: typeof filteredNotifications }[] = [];
+    const filtered = filteredNotifications();
+    
+    const today: typeof filtered = [];
+    const yesterday: typeof filtered = [];
+    const thisWeek: typeof filtered = [];
+    const older: typeof filtered = [];
+    
+    filtered.forEach(notification => {
+      const date = notification.createdAt instanceof Date 
+        ? notification.createdAt 
+        : (notification.createdAt as any).toDate();
+        
+      if (isToday(date)) {
+        today.push(notification);
+      } else if (isYesterday(date)) {
+        yesterday.push(notification);
+      } else if (isThisWeek(date, { weekStartsOn: 1 })) {
+        thisWeek.push(notification);
+      } else {
+        older.push(notification);
+      }
+    });
+    
+    if (today.length > 0) groups.push({ label: 'Today', notifications: today });
+    if (yesterday.length > 0) groups.push({ label: 'Yesterday', notifications: yesterday });
+    if (thisWeek.length > 0) groups.push({ label: 'This Week', notifications: thisWeek });
+    if (older.length > 0) groups.push({ label: 'Older', notifications: older });
+    
+    return groups;
   });
   
   onMount(() => {
@@ -71,6 +141,15 @@
     selectedNotifications = new Set();
   }
   
+  async function archiveSelected() {
+    await notificationsStore.archiveNotifications(Array.from(selectedNotifications));
+    selectedNotifications = new Set();
+  }
+  
+  async function archiveAllRead() {
+    await notificationsStore.archiveAllRead();
+  }
+  
   async function loadMore() {
     await notificationsStore.loadMore();
   }
@@ -101,16 +180,27 @@
         </div>
       </div>
       
-      <div class="flex items-center gap-2">
-        <Filter class="h-5 w-5 text-gray-400" />
-        <select
-          bind:value={selectedType}
-          class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100"
-        >
-          {#each notificationTypes as type}
-            <option value={type.value}>{type.label}</option>
-          {/each}
-        </select>
+      <div class="flex items-center gap-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            bind:checked={showUnreadOnly}
+            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span class="text-sm text-gray-600 dark:text-gray-400">Unread only</span>
+        </label>
+        
+        <div class="flex items-center gap-2">
+          <Filter class="h-5 w-5 text-gray-400" />
+          <select
+            bind:value={selectedType}
+            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100"
+          >
+            {#each notificationTypes as type}
+              <option value={type.value}>{type.label}</option>
+            {/each}
+          </select>
+        </div>
       </div>
     </div>
     
@@ -125,6 +215,23 @@
         >
           <Check class="h-4 w-4" />
           Mark as read
+        </button>
+        <button
+          onclick={archiveSelected}
+          class="text-sm text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 flex items-center gap-1"
+        >
+          <Archive class="h-4 w-4" />
+          Archive
+        </button>
+      </div>
+    {:else}
+      <div class="mt-4 flex justify-end">
+        <button
+          onclick={archiveAllRead}
+          class="text-sm text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 flex items-center gap-1"
+        >
+          <ArchiveX class="h-4 w-4" />
+          Archive all read
         </button>
       </div>
     {/if}
@@ -163,22 +270,33 @@
         </label>
       </div>
       
-      <div class="divide-y divide-gray-200 dark:divide-gray-700">
-        {#each filteredNotifications() as notification (notification.id)}
-          <div class="flex items-center hover:bg-gray-50 dark:hover:bg-gray-700/50">
-            <div class="pl-4">
-              <input
-                type="checkbox"
-                checked={selectedNotifications.has(notification.id!)}
-                onchange={() => toggleSelection(notification.id!)}
-                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
+      <div class="max-h-[600px] overflow-auto">
+        {#each groupedNotifications() as group}
+          <div class="border-b border-gray-200 dark:border-gray-700">
+            <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700/50 sticky top-0 z-10">
+              <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                {group.label}
+              </h3>
             </div>
-            <div class="flex-1">
-              <NotificationItem 
-                {notification}
-                onclick={() => notificationsStore.markNotificationAsRead(notification.id!)}
-              />
+            <div class="divide-y divide-gray-200 dark:divide-gray-700">
+              {#each group.notifications as notification (notification.id)}
+                <div class="flex items-center hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <div class="pl-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedNotifications.has(notification.id!)}
+                      onchange={() => toggleSelection(notification.id!)}
+                      class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div class="flex-1">
+                    <NotificationItem 
+                      {notification}
+                      onclick={() => notificationsStore.markNotificationAsRead(notification.id!)}
+                    />
+                  </div>
+                </div>
+              {/each}
             </div>
           </div>
         {/each}

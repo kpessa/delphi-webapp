@@ -2,10 +2,15 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import OpenAI from 'openai';
 import cors from 'cors';
-import type { ExtractTopicRequest, ExtractTopicResponse, FeedbackType, Notification, NotificationPreferences } from '../../src/lib/firebase/types';
+import type { ExtractTopicRequest, ExtractTopicResponse, FeedbackType, Notification, NotificationPreferences, NotificationType } from '../../src/lib/firebase/types';
 
 // Initialize Firebase Admin
 admin.initializeApp();
+
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_NOTIFICATIONS_PER_WINDOW = 10; // Max 10 notifications per minute per user
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 // Initialize OpenAI
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
@@ -14,6 +19,138 @@ const openai = process.env.OPENAI_API_KEY ? new OpenAI({
 
 // Enable CORS
 const corsHandler = cors({ origin: true });
+
+// Valid notification types
+const VALID_NOTIFICATION_TYPES: NotificationType[] = [
+  'topic_assigned', 
+  'new_feedback', 
+  'round_closed', 
+  'consensus_reached', 
+  'invitation'
+];
+
+// Helper function to check rate limit
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const userLimit = rateLimitMap.get(userId);
+  
+  if (!userLimit || now > userLimit.resetTime) {
+    rateLimitMap.set(userId, {
+      count: 1,
+      resetTime: now + RATE_LIMIT_WINDOW
+    });
+    return true;
+  }
+  
+  if (userLimit.count >= MAX_NOTIFICATIONS_PER_WINDOW) {
+    return false;
+  }
+  
+  userLimit.count++;
+  return true;
+}
+
+// Helper function to validate notification data
+function validateNotificationData(data: any): { valid: boolean; error?: string } {
+  // Check required fields
+  if (!data.userId || typeof data.userId !== 'string') {
+    return { valid: false, error: 'Invalid or missing userId' };
+  }
+  
+  if (!data.type || !VALID_NOTIFICATION_TYPES.includes(data.type)) {
+    return { valid: false, error: 'Invalid or missing notification type' };
+  }
+  
+  if (!data.title || typeof data.title !== 'string' || data.title.length > 100) {
+    return { valid: false, error: 'Invalid or missing title (max 100 chars)' };
+  }
+  
+  if (!data.message || typeof data.message !== 'string' || data.message.length > 500) {
+    return { valid: false, error: 'Invalid or missing message (max 500 chars)' };
+  }
+  
+  if (data.data && typeof data.data !== 'object') {
+    return { valid: false, error: 'Invalid data field (must be object)' };
+  }
+  
+  // Validate type-specific data
+  switch (data.type) {
+    case 'topic_assigned':
+    case 'new_feedback':
+    case 'round_closed':
+    case 'consensus_reached':
+      if (!data.data?.topicId) {
+        return { valid: false, error: 'Missing topicId in data' };
+      }
+      break;
+    case 'invitation':
+      if (!data.data?.panelId) {
+        return { valid: false, error: 'Missing panelId in data' };
+      }
+      break;
+  }
+  
+  return { valid: true };
+}
+
+// HTTP function to create notifications (for internal use)
+export const createNotification = functions.https.onRequest(async (req, res) => {
+  corsHandler(req, res, async () => {
+    try {
+      // Verify authentication
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+      }
+
+      const idToken = authHeader.split('Bearer ')[1];
+      let decodedToken;
+      try {
+        decodedToken = await admin.auth().verifyIdToken(idToken);
+      } catch (error) {
+        res.status(401).json({ error: 'Invalid token' });
+        return;
+      }
+
+      // Check rate limit
+      if (!checkRateLimit(decodedToken.uid)) {
+        res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
+        return;
+      }
+
+      // Validate notification data
+      const validation = validateNotificationData(req.body);
+      if (!validation.valid) {
+        res.status(400).json({ error: validation.error });
+        return;
+      }
+
+      // Create notification
+      const notification: Notification = {
+        userId: req.body.userId,
+        type: req.body.type,
+        title: req.body.title,
+        message: req.body.message,
+        data: req.body.data || {},
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp() as any
+      };
+
+      const docRef = await admin.firestore()
+        .collection('notifications')
+        .add(notification);
+
+      res.status(201).json({ 
+        success: true, 
+        notificationId: docRef.id 
+      });
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      res.status(500).json({ error: 'Failed to create notification' });
+    }
+  });
+});
 
 export const extractTopic = functions.https.onRequest(async (req, res) => {
   corsHandler(req, res, async () => {
@@ -486,6 +623,20 @@ function getDigestEmailContent(notifications: any[], frequency: 'daily' | 'weekl
   };
 }
 
+// Helper function to create a validated notification
+async function createValidatedNotification(notificationData: Omit<Notification, 'createdAt'>) {
+  const validation = validateNotificationData(notificationData);
+  if (!validation.valid) {
+    console.error('Invalid notification data:', validation.error);
+    return null;
+  }
+  
+  return admin.firestore().collection('notifications').add({
+    ...notificationData,
+    createdAt: admin.firestore.FieldValue.serverTimestamp()
+  });
+}
+
 // Notification triggers for various events
 export const onTopicAssigned = functions.firestore
   .document('topics/{topicId}')
@@ -506,16 +657,24 @@ export const onTopicAssigned = functions.firestore
     const batch = admin.firestore().batch();
     
     for (const expertId of panel.expertIds) {
-      const notificationRef = admin.firestore().collection('notifications').doc();
-      batch.set(notificationRef, {
+      const notificationData = {
         userId: expertId,
-        type: 'topic_assigned',
+        type: 'topic_assigned' as NotificationType,
         title: 'New Topic Assigned',
-        message: `You have been assigned to provide feedback on: ${topic.title}`,
+        message: `You have been assigned to provide feedback on: ${topic.title}`.substring(0, 500),
         data: { topicId, panelId: topic.panelId },
-        read: false,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
-      });
+        read: false
+      };
+      
+      // Validate before adding to batch
+      const validation = validateNotificationData(notificationData);
+      if (validation.valid) {
+        const notificationRef = admin.firestore().collection('notifications').doc();
+        batch.set(notificationRef, {
+          ...notificationData,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
     }
     
     await batch.commit();
@@ -535,15 +694,14 @@ export const onNewFeedback = functions.firestore
     const topic = topicDoc.data();
     if (!topic || feedback.expertId === topic.createdBy) return;
     
-    // Notify topic creator
-    await admin.firestore().collection('notifications').add({
+    // Notify topic creator with validation
+    await createValidatedNotification({
       userId: topic.createdBy,
       type: 'new_feedback',
       title: 'New Feedback Received',
-      message: `New ${feedback.type} on your topic: ${topic.title}`,
+      message: `New ${feedback.type} on your topic: ${topic.title}`.substring(0, 500),
       data: { topicId: feedback.topicId, feedbackId: context.params.feedbackId },
-      read: false,
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+      read: false
     });
   });
 

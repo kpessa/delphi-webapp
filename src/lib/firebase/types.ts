@@ -153,6 +153,7 @@ export interface Notification {
   message: string;
   data?: Record<string, any>; // Links to topic, panel, etc.
   read: boolean;
+  archived?: boolean;
   createdAt: Date;
 }
 
@@ -164,4 +165,7 @@ export interface NotificationPreferences {
   newFeedback: boolean;
   roundClosed: boolean;
   consensusReached: boolean;
+  soundEnabled?: boolean;
+  soundVolume?: number; // 0-100
+  browserNotifications?: boolean;
 }

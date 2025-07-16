@@ -4,9 +4,13 @@ import {
   subscribeToUnreadCount,
   markAsRead,
   markAllAsRead,
-  getNotifications
+  getNotifications,
+  getPreferences,
+  archiveNotification,
+  archiveNotifications,
+  archiveAllRead
 } from '$lib/firebase/notifications';
-import type { Notification } from '$lib/firebase/types';
+import type { Notification, NotificationPreferences } from '$lib/firebase/types';
 import type { Unsubscribe } from 'firebase/firestore';
 import { showNotificationToast } from '$lib/utils/notification-toast';
 
@@ -15,6 +19,7 @@ class NotificationsStore {
   unreadCount = $state<number>(0);
   loading = $state<boolean>(false);
   error = $state<string | null>(null);
+  preferences = $state<NotificationPreferences | null>(null);
   
   private unsubscribeNotifications?: Unsubscribe;
   private unsubscribeCount?: Unsubscribe;
@@ -36,6 +41,9 @@ class NotificationsStore {
     this.error = null;
 
     try {
+      // Load user preferences
+      this.preferences = await getPreferences(user.uid);
+      
       // Load initial notifications
       const initialNotifications = await getNotifications(user.uid, 20);
       this.notifications = initialNotifications;
@@ -50,8 +58,8 @@ class NotificationsStore {
             !this.notifications.find(existing => existing.id === n.id)
           );
           
-          // Show toast for new notifications
-          newNotifications.forEach(n => showNotificationToast(n));
+          // Show toast for new notifications with preferences
+          newNotifications.forEach(n => showNotificationToast(n, this.preferences));
           
           this.notifications = notifications;
         }
@@ -98,6 +106,53 @@ class NotificationsStore {
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
       this.error = 'Failed to mark all notifications as read';
+    }
+  }
+
+  async archiveNotification(notificationId: string) {
+    try {
+      await archiveNotification(notificationId);
+      // Remove from local state
+      this.notifications = this.notifications.filter(n => n.id !== notificationId);
+      // Update unread count if needed
+      const notification = this.notifications.find(n => n.id === notificationId);
+      if (notification && !notification.read) {
+        this.unreadCount = Math.max(0, this.unreadCount - 1);
+      }
+    } catch (error) {
+      console.error('Error archiving notification:', error);
+      this.error = 'Failed to archive notification';
+    }
+  }
+
+  async archiveNotifications(notificationIds: string[]) {
+    try {
+      await archiveNotifications(notificationIds);
+      // Remove from local state
+      this.notifications = this.notifications.filter(n => !notificationIds.includes(n.id!));
+      // Update unread count
+      const unreadArchived = notificationIds.filter(id => {
+        const notification = this.notifications.find(n => n.id === id);
+        return notification && !notification.read;
+      }).length;
+      this.unreadCount = Math.max(0, this.unreadCount - unreadArchived);
+    } catch (error) {
+      console.error('Error archiving notifications:', error);
+      this.error = 'Failed to archive notifications';
+    }
+  }
+
+  async archiveAllRead() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      await archiveAllRead(user.uid);
+      // Remove all read notifications from local state
+      this.notifications = this.notifications.filter(n => !n.read);
+    } catch (error) {
+      console.error('Error archiving all read notifications:', error);
+      this.error = 'Failed to archive all read notifications';
     }
   }
 

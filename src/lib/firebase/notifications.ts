@@ -53,16 +53,23 @@ export async function createNotification(
 export async function getNotifications(
   userId: string,
   limitCount: number = 20,
-  lastDoc?: any
+  lastDoc?: any,
+  includeArchived: boolean = false
 ): Promise<Notification[]> {
   try {
     const notificationsRef = collection(db, NOTIFICATIONS_COLLECTION);
-    let q = query(
-      notificationsRef,
+    const constraints = [
       where('userId', '==', userId),
       orderBy('createdAt', 'desc'),
       limit(limitCount)
-    );
+    ];
+    
+    // Filter out archived notifications by default
+    if (!includeArchived) {
+      constraints.push(where('archived', '!=', true));
+    }
+
+    let q = query(notificationsRef, ...constraints);
 
     if (lastDoc) {
       q = query(
@@ -119,6 +126,65 @@ export async function markAllAsRead(userId: string): Promise<void> {
   }
 }
 
+// Archive a single notification
+export async function archiveNotification(notificationId: string): Promise<void> {
+  try {
+    const notificationRef = doc(db, NOTIFICATIONS_COLLECTION, notificationId);
+    await updateDoc(notificationRef, { 
+      archived: true,
+      read: true // Automatically mark as read when archiving
+    });
+  } catch (error) {
+    console.error('Error archiving notification:', error);
+    throw error;
+  }
+}
+
+// Archive multiple notifications
+export async function archiveNotifications(notificationIds: string[]): Promise<void> {
+  try {
+    const batch = writeBatch(db);
+    
+    notificationIds.forEach(id => {
+      const notificationRef = doc(db, NOTIFICATIONS_COLLECTION, id);
+      batch.update(notificationRef, { 
+        archived: true,
+        read: true
+      });
+    });
+    
+    await batch.commit();
+  } catch (error) {
+    console.error('Error archiving notifications:', error);
+    throw error;
+  }
+}
+
+// Archive all read notifications
+export async function archiveAllRead(userId: string): Promise<void> {
+  try {
+    const notificationsRef = collection(db, NOTIFICATIONS_COLLECTION);
+    const q = query(
+      notificationsRef,
+      where('userId', '==', userId),
+      where('read', '==', true),
+      where('archived', '!=', true)
+    );
+    
+    const snapshot = await getDocs(q);
+    const batch = writeBatch(db);
+    
+    snapshot.docs.forEach(doc => {
+      batch.update(doc.ref, { archived: true });
+    });
+    
+    await batch.commit();
+  } catch (error) {
+    console.error('Error archiving all read notifications:', error);
+    throw error;
+  }
+}
+
 // Get unread notification count
 export async function getUnreadCount(userId: string): Promise<number> {
   try {
@@ -126,7 +192,8 @@ export async function getUnreadCount(userId: string): Promise<number> {
     const q = query(
       notificationsRef,
       where('userId', '==', userId),
-      where('read', '==', false)
+      where('read', '==', false),
+      where('archived', '!=', true)
     );
 
     const snapshot = await getDocs(q);
@@ -183,15 +250,22 @@ export async function getPreferences(userId: string): Promise<NotificationPrefer
 // Real-time listener for new notifications
 export function subscribeToNotifications(
   userId: string,
-  callback: (notifications: Notification[]) => void
+  callback: (notifications: Notification[]) => void,
+  includeArchived: boolean = false
 ): Unsubscribe {
   const notificationsRef = collection(db, NOTIFICATIONS_COLLECTION);
-  const q = query(
-    notificationsRef,
+  const constraints = [
     where('userId', '==', userId),
     orderBy('createdAt', 'desc'),
     limit(20)
-  );
+  ];
+  
+  // Filter out archived notifications by default
+  if (!includeArchived) {
+    constraints.push(where('archived', '!=', true));
+  }
+  
+  const q = query(notificationsRef, ...constraints);
 
   return onSnapshot(q, snapshot => {
     const notifications = snapshot.docs.map(doc => ({
@@ -211,7 +285,8 @@ export function subscribeToUnreadCount(
   const q = query(
     notificationsRef,
     where('userId', '==', userId),
-    where('read', '==', false)
+    where('read', '==', false),
+    where('archived', '!=', true)
   );
 
   return onSnapshot(q, snapshot => {

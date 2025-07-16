@@ -71,7 +71,7 @@
     <div class="{iconColor} {!notification.read ? 'relative' : ''}">
       <Icon class="h-5 w-5" />
       {#if !notification.read}
-        <span class="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+        <span class="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full"></span>
       {/if}
     </div>
   </div>

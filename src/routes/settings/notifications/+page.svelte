@@ -8,7 +8,9 @@
     CheckCircle, 
     XCircle,
     Save,
-    TestTube
+    TestTube,
+    Volume2,
+    Monitor
   } from 'lucide-svelte';
   import { getPreferences, updatePreferences, createNotification } from '$lib/firebase/notifications';
   import { auth } from '$lib/firebase/auth';
@@ -132,6 +134,89 @@
                 {/if}
               </p>
             </div>
+          {/if}
+        </div>
+      </div>
+      
+      <!-- Sound Notifications -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center gap-3 mb-6">
+          <Volume2 class="h-6 w-6 text-gray-700 dark:text-gray-300" />
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            Sound Notifications
+          </h2>
+        </div>
+        
+        <div class="space-y-4">
+          <label class="flex items-center justify-between cursor-pointer">
+            <span class="text-gray-700 dark:text-gray-300">
+              Enable notification sounds
+            </span>
+            <input
+              type="checkbox"
+              bind:checked={preferences.soundEnabled}
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+          </label>
+          
+          {#if preferences.soundEnabled}
+            <div class="ml-0 mt-4">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Volume ({preferences.soundVolume || 50}%)
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                bind:value={preferences.soundVolume}
+                class="w-full"
+              />
+            </div>
+          {/if}
+        </div>
+      </div>
+      
+      <!-- Browser Notifications -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="flex items-center gap-3 mb-6">
+          <Monitor class="h-6 w-6 text-gray-700 dark:text-gray-300" />
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            Browser Notifications
+          </h2>
+        </div>
+        
+        <div class="space-y-4">
+          <label class="flex items-center justify-between cursor-pointer">
+            <div>
+              <p class="text-gray-700 dark:text-gray-300">
+                Enable browser notifications
+              </p>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Show desktop notifications when new events occur
+              </p>
+            </div>
+            <input
+              type="checkbox"
+              bind:checked={preferences.browserNotifications}
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+          </label>
+          
+          {#if preferences.browserNotifications && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default'}
+            <button
+              onclick={async () => {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                  toast.success('Browser notifications enabled');
+                } else {
+                  toast.error('Browser notifications were denied');
+                  preferences.browserNotifications = false;
+                }
+              }}
+              class="w-full px-4 py-2 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-200 rounded-md transition-colors"
+            >
+              Request browser permission
+            </button>
           {/if}
         </div>
       </div>

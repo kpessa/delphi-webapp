@@ -49,7 +49,7 @@
     {#if notificationsStore.unreadCount > 0}
       <span
         transition:fade={{ duration: 200 }}
-        class="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-medium animate-pulse"
+        class="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium animate-pulse"
       >
         {notificationsStore.unreadCount > 99 ? '99+' : notificationsStore.unreadCount}
       </span>
@@ -64,13 +64,13 @@
 <style>
   @keyframes pulse {
     0% {
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0.7);
     }
     70% {
-      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+      box-shadow: 0 0 0 4px hsl(var(--primary) / 0);
     }
     100% {
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+      box-shadow: 0 0 0 0 hsl(var(--primary) / 0);
     }
   }
 
