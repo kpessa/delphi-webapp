@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      bits-ui:
-        specifier: 1.0.0-next.98
-        version: 1.0.0-next.98(svelte@5.36.0)
       chart.js:
         specifier: ^4.5.0
         version: 4.5.0
@@ -33,6 +30,12 @@ importers:
         specifier: ^4.0.5
         version: 4.0.5
     devDependencies:
+      '@internationalized/date':
+        specifier: ^3.8.2
+        version: 3.8.2
+      '@lucide/svelte':
+        specifier: ^0.515.0
+        version: 0.515.0(svelte@5.36.0)
       '@radix-ui/primitive':
         specifier: ^1.1.2
         version: 1.1.2
@@ -57,6 +60,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.6)
+      bits-ui:
+        specifier: 2.8.11
+        version: 2.8.11(@internationalized/date@3.8.2)(svelte@5.36.0)
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -506,6 +512,11 @@ packages:
   '@kurkle/color@0.3.4':
     resolution: {integrity: sha512-M5UknZPHRu3DEDWoipU6sE8PdkZ6Z/S+v4dD+Ke8IaNlpdSQah50lz1KtcFBa2vsdOnwbbnxJwVM4wty6udA5w==}
 
+  '@lucide/svelte@0.515.0':
+    resolution: {integrity: sha512-CEAyqcZmNBfYzVgaRmK2RFJP5tnbXxekRyDk0XX/eZQRfsJmkDvmQwXNX8C869BgNeryzmrRyjHhUL6g9ZOHNA==}
+    peerDependencies:
+      svelte: ^5
+
   '@mapbox/node-pre-gyp@2.0.0':
     resolution: {integrity: sha512-llMXd39jtP0HpQLVI37Bf1m2ADlEb35GYSh1SDSLsBhR+5iCxiNGlT31yqbNtVHygHAtMy6dWFERpU2JgufhPg==}
     engines: {node: '>=18'}
@@ -867,11 +878,12 @@ packages:
   bindings@1.5.0:
     resolution: {integrity: sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==}
 
-  bits-ui@1.0.0-next.98:
-    resolution: {integrity: sha512-DYJNoi3pqLiJqmnOeKJp8dSmACu7yONmcoH6YqzrGnIQTgJ4bqL1D1C8gvDoUhWnCAtUWJ8fgyp9d25iOQAkiA==}
-    engines: {node: '>=18', pnpm: '>=8.7.0'}
+  bits-ui@2.8.11:
+    resolution: {integrity: sha512-lKN9rAk69my6j7H1D4B87r8LrHuEtfEsf1xCixBj9yViql2BdI3f04HyyyT7T1GOCpgb9+8b0B+nm3LN81Konw==}
+    engines: {node: '>=20'}
     peerDependencies:
-      svelte: ^5.11.0
+      '@internationalized/date': ^3.8.1
+      svelte: ^5.33.0
 
   brace-expansion@2.0.2:
     resolution: {integrity: sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ==}
@@ -1278,6 +1290,11 @@ packages:
     peerDependencies:
       svelte: ^5.7.0
 
+  runed@0.29.2:
+    resolution: {integrity: sha512-0cq6cA6sYGZwl/FvVqjx9YN+1xEBu9sDDyuWdDW1yWX7JF2wmvmVKfH+hVCZs+csW+P3ARH92MjI3H9QTagOQA==}
+    peerDependencies:
+      svelte: ^5.7.0
+
   sade@1.8.1:
     resolution: {integrity: sha512-xal3CZX1Xlo/k4ApwCFrHVACi9fBqJ7V+mwhBsuf/1IOKbBy098Fex+Wa/5QMubw09pSZ/u8EY8PWgevJsXp1A==}
     engines: {node: '>=6'}
@@ -1350,6 +1367,12 @@ packages:
     engines: {node: '>=18', pnpm: '>=8.7.0'}
     peerDependencies:
       svelte: ^5.0.0
+
+  svelte-toolbelt@0.9.3:
+    resolution: {integrity: sha512-HCSWxCtVmv+c6g1ACb8LTwHVbDqLKJvHpo6J8TaqwUme2hj9ATJCpjCPNISR1OCq2Q4U1KT41if9ON0isINQZw==}
+    engines: {node: '>=18', pnpm: '>=8.7.0'}
+    peerDependencies:
+      svelte: ^5.30.2
 
   svelte@5.36.0:
     resolution: {integrity: sha512-mQwp864P/ipJTElwU8L1LzkbzdUHfrn1su/R8mTJrH7M9mSi42hsgfHA0JU0f4OSkiznlWixan5FcUdR85G3BQ==}
@@ -1979,6 +2002,10 @@ snapshots:
 
   '@kurkle/color@0.3.4': {}
 
+  '@lucide/svelte@0.515.0(svelte@5.36.0)':
+    dependencies:
+      svelte: 5.36.0
+
   '@mapbox/node-pre-gyp@2.0.0':
     dependencies:
       consola: 3.4.2
@@ -2301,15 +2328,15 @@ snapshots:
     dependencies:
       file-uri-to-path: 1.0.0
 
-  bits-ui@1.0.0-next.98(svelte@5.36.0):
+  bits-ui@2.8.11(@internationalized/date@3.8.2)(svelte@5.36.0):
     dependencies:
       '@floating-ui/core': 1.7.2
       '@floating-ui/dom': 1.7.2
       '@internationalized/date': 3.8.2
       esm-env: 1.2.2
-      runed: 0.23.4(svelte@5.36.0)
+      runed: 0.29.2(svelte@5.36.0)
       svelte: 5.36.0
-      svelte-toolbelt: 0.7.1(svelte@5.36.0)
+      svelte-toolbelt: 0.9.3(svelte@5.36.0)
       tabbable: 6.2.0
 
   brace-expansion@2.0.2:
@@ -2715,6 +2742,11 @@ snapshots:
       esm-env: 1.2.2
       svelte: 5.36.0
 
+  runed@0.29.2(svelte@5.36.0):
+    dependencies:
+      esm-env: 1.2.2
+      svelte: 5.36.0
+
   sade@1.8.1:
     dependencies:
       mri: 1.2.0
@@ -2786,6 +2818,13 @@ snapshots:
     dependencies:
       clsx: 2.1.1
       runed: 0.23.4(svelte@5.36.0)
+      style-to-object: 1.0.9
+      svelte: 5.36.0
+
+  svelte-toolbelt@0.9.3(svelte@5.36.0):
+    dependencies:
+      clsx: 2.1.1
+      runed: 0.29.2(svelte@5.36.0)
       style-to-object: 1.0.9
       svelte: 5.36.0
 

@@ -1,15 +1,34 @@
 // Core Types for Delphi Platform
 
+export type TopicType = 
+  | 'priority-setting'    // What should we prioritize?
+  | 'policy-decision'     // Should we implement this policy?
+  | 'solution-selection'  // Which approach should we take?
+  | 'indicator-development' // What metrics should we track?
+  | 'resource-allocation' // How should we allocate resources?
+  | 'quality-improvement' // How can we improve quality?
+  | 'risk-assessment'     // What are the risks and mitigation strategies?
+  | 'strategic-planning'  // What are our strategic options?
+  | 'clinical-guidelines' // What clinical practices should we adopt?
+  | 'technology-adoption' // Should we adopt this technology?
+
 export interface Topic {
   id?: string;
   title: string;
   description: string;
   question: string;
   panelId: string;
-  creatorId: string;
+  createdBy: string;
   status: 'draft' | 'active' | 'completed';
   roundNumber: number;
   currentRoundId?: string;
+  
+  // Healthcare-specific fields
+  topicType: TopicType;
+  expectedOutcome: 'recommendation' | 'ranking' | 'consensus-rating' | 'action-plan';
+  urgency: 'low' | 'medium' | 'high' | 'critical';
+  scope: 'department' | 'facility' | 'regional' | 'system-wide';
+  totalRounds?: number; // Default 2, configurable
   
   // AI extraction fields
   rawInput?: string;
@@ -22,6 +41,8 @@ export interface Topic {
 
 export type FeedbackType = 'idea' | 'solution' | 'concern' | 'vote' | 'refinement';
 
+export type AgreementLevel = -2 | -1 | 0 | 1 | 2;
+
 export interface Feedback {
   id?: string;
   topicId: string;
@@ -31,8 +52,11 @@ export interface Feedback {
   roundNumber: number;
   type: FeedbackType;
   content: string;
+  // Legacy voting system (for backwards compatibility)
   upvotes: string[]; // Array of user IDs who upvoted
   downvotes: string[]; // Array of user IDs who downvoted
+  // New 5-point agreement system
+  agreements: Record<string, AgreementLevel>; // expertId -> agreement level
   parentId?: string | null; // For threading refinements
   metadata?: {
     reasoning?: string;
@@ -48,6 +72,7 @@ export interface Panel {
   name: string;
   description: string;
   creatorId: string;
+  adminIds: string[];
   expertIds: string[];
   status: 'active' | 'archived';
   createdAt: Date;

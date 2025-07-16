@@ -11,6 +11,7 @@ import {
 	where,
 	orderBy,
 	serverTimestamp,
+	runTransaction,
 	type QueryConstraint,
 	limit,
 	Timestamp,
@@ -27,14 +28,50 @@ export async function createTopic(topic: Omit<Topic, 'id' | 'createdAt' | 'updat
 		throw new Error('User must be authenticated to create a topic');
 	}
 
-	const docRef = await addDoc(collection(db, TOPICS_COLLECTION), {
+	// Ensure createdBy is set correctly
+	const topicData = {
 		...topic,
-		creatorId: auth.currentUser.uid,
+		createdBy: topic.createdBy || auth.currentUser.uid,
 		createdAt: serverTimestamp(),
 		updatedAt: serverTimestamp()
+	};
+	
+	// Remove any undefined values to prevent Firestore errors
+	Object.keys(topicData).forEach(key => {
+		if (topicData[key] === undefined) {
+			delete topicData[key];
+		}
 	});
-
-	return docRef.id;
+	
+	// Create topic and first round in a transaction
+	return await runTransaction(db, async (transaction) => {
+		// Create the topic with configured rounds (default 2)
+		const topicRef = doc(collection(db, TOPICS_COLLECTION));
+		const topicDataWithRounds = {
+			...topicData,
+			totalRounds: topicData.totalRounds || 2,
+			roundNumber: 1
+		};
+		transaction.set(topicRef, topicDataWithRounds);
+		
+		// Create the first round
+		const roundRef = doc(collection(db, 'rounds'));
+		const roundData = {
+			topicId: topicRef.id,
+			roundNumber: 1,
+			status: 'active',
+			startDate: serverTimestamp()
+		};
+		transaction.set(roundRef, roundData);
+		
+		// Update topic with current round ID and active status
+		transaction.update(topicRef, {
+			currentRoundId: roundRef.id,
+			status: 'active'
+		});
+		
+		return topicRef.id;
+	});
 }
 
 export async function updateTopic(id: string, updates: Partial<Topic>): Promise<void> {
@@ -115,7 +152,7 @@ export async function getTopics(filters?: {
 	const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
 
 	if (filters?.creatorId) {
-		constraints.push(where('creatorId', '==', filters.creatorId));
+		constraints.push(where('createdBy', '==', filters.creatorId));
 	}
 
 	if (filters?.status) {

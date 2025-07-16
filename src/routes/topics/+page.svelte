@@ -1,167 +1,151 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import {
-		Table,
-		TableBody,
-		TableCaption,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table';
-	import { subscribeToAuthState, type AuthUser } from '$lib/firebase/auth';
-	import { getTopicsByCreator } from '$lib/firebase/topics';
-	import type { Topic } from '$lib/firebase/types';
-	import { Plus, Edit, Trash2, Wand2 } from 'lucide-svelte';
+  import { onMount } from 'svelte';
+  import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+  import { db } from '$lib/firebase/config';
+  import { authStore } from '$lib/stores/auth.svelte';
+  import { getPanels } from '$lib/firebase/panels';
+  import type { Topic, Panel } from '$lib/firebase/types';
+  import { Button } from '$lib/components/ui/button';
+  import { Card } from '$lib/components/ui/card';
+  import { Badge } from '$lib/components/ui/badge';
+  import { Skeleton } from '$lib/components/ui/skeleton';
+  import { Plus, MessageSquare, TrendingUp, Clock, Users } from 'lucide-svelte';
+  import { goto } from '$app/navigation';
 
-	let user: AuthUser | null = null;
-	let topics: Topic[] = [];
-	let loading = true;
+  let topics: Topic[] = $state([]);
+  let panels: Panel[] = $state([]);
+  let loading: boolean = $state(true);
+  let unsubscribe: (() => void) | null = null;
+  
+  // Create a map for quick panel lookup
+  let panelMap = $derived(
+    panels.reduce((map, panel) => {
+      if (panel.id) map[panel.id] = panel;
+      return map;
+    }, {} as Record<string, Panel>)
+  );
 
-	onMount(() => {
-		const unsubscribe = subscribeToAuthState(async (authUser) => {
-			if (!authUser) {
-				goto('/auth/login');
-			} else {
-				user = authUser;
-				await loadTopics();
-			}
-		});
+  onMount(async () => {
+    // Load panels first
+    try {
+      panels = await getPanels();
+    } catch (error) {
+      console.error('Error loading panels:', error);
+    }
+    
+    const topicsRef = collection(db, 'topics');
+    const q = query(topicsRef, orderBy('createdAt', 'desc'));
 
-		return unsubscribe;
-	});
+    unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        topics = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate() || new Date(),
+          updatedAt: doc.data().updatedAt?.toDate() || new Date()
+        } as Topic));
+        loading = false;
+      },
+      (error) => {
+        console.error('Error loading topics:', error);
+        loading = false;
+      }
+    );
 
-	async function loadTopics() {
-		if (!user) return;
-		
-		try {
-			loading = true;
-			topics = await getTopicsByCreator(user.uid);
-		} catch (error) {
-			console.error('Error loading topics:', error);
-		} finally {
-			loading = false;
-		}
-	}
+    return () => unsubscribe?.();
+  });
 
-	function getStatusBadgeVariant(status: string) {
-		const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-			draft: 'secondary',
-			active: 'default',
-			completed: 'outline'
-		};
-		return variants[status] || 'secondary';
-	}
+  function navigateToTopic(topicId: string) {
+    goto(`/topics/${topicId}`);
+  }
 </script>
 
 <svelte:head>
-	<title>Topics - Delphi Platform</title>
+  <title>Topics - Delphi Platform</title>
 </svelte:head>
 
-<div class="py-8">
-	<div class="flex items-center justify-between mb-6">
-		<div>
-			<h1 class="text-3xl font-bold">Topics</h1>
-			<p class="mt-1 text-sm text-muted-foreground">
-				Manage discussion topics for expert panels using the Delphi method
-			</p>
-		</div>
-		<Button href="/topics/new" class="flex items-center gap-2">
-			<Plus class="h-4 w-4" />
-			Create Topic
-		</Button>
-	</div>
+<div class="container mx-auto py-8 px-4">
+  <div class="flex justify-between items-center mb-8">
+    <div>
+      <h1 class="text-3xl font-bold mb-2">Topics</h1>
+      <p class="text-muted-foreground">
+        Explore and contribute to strategic discussions
+      </p>
+    </div>
+    
+    {#if authStore.user}
+      <Button href="/topics/new">
+        <Plus class="h-4 w-4 mr-2" />
+        New Topic
+      </Button>
+    {/if}
+  </div>
 
-	<div>
-		{#if loading}
-			<div class="flex items-center justify-center py-12">
-				<p class="text-gray-500">Loading topics...</p>
-			</div>
-		{:else if topics.length === 0}
-			<div class="rounded-lg bg-card p-8 text-center shadow-sm border">
-				<h3 class="text-lg font-medium">No topics yet</h3>
-				<p class="mt-2 text-sm text-muted-foreground">
-					Get started by creating your first topic for expert discussion.
-				</p>
-				<Button href="/topics/new" class="mt-4">
-					Create Your First Topic
-				</Button>
-			</div>
-		{:else}
-			<div class="rounded-lg bg-card shadow-sm border">
-				<Table>
-					<TableCaption>A list of your Delphi method topics</TableCaption>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Title</TableHead>
-							<TableHead>Question</TableHead>
-							<TableHead>Status</TableHead>
-							<TableHead>Round</TableHead>
-							<TableHead>Source</TableHead>
-							<TableHead class="text-right">Actions</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{#each topics as topic}
-							<TableRow>
-								<TableCell class="font-medium max-w-xs">
-									<a href="/topics/{topic.id}" class="hover:underline truncate block">
-										{topic.title}
-									</a>
-								</TableCell>
-								<TableCell class="max-w-md truncate">{topic.question}</TableCell>
-								<TableCell>
-									<Badge variant={getStatusBadgeVariant(topic.status)}>
-										{topic.status}
-									</Badge>
-								</TableCell>
-								<TableCell>{topic.roundNumber}</TableCell>
-								<TableCell>
-									{#if topic.aiExtracted}
-										<div class="flex items-center gap-1">
-											<Wand2 class="h-3 w-3" />
-											<span class="text-xs">AI</span>
-										</div>
-									{:else}
-										<span class="text-xs">Manual</span>
-									{/if}
-								</TableCell>
-								<TableCell class="text-right">
-									<div class="flex items-center justify-end gap-2">
-										<Button
-											href="/topics/{topic.id}"
-											variant="ghost"
-											size="sm"
-											title="View topic"
-										>
-											View
-										</Button>
-										<Button
-											href="/topics/{topic.id}/edit"
-											variant="ghost"
-											size="sm"
-											title="Edit topic"
-										>
-											<Edit class="h-4 w-4" />
-										</Button>
-										<Button
-											variant="ghost"
-											size="sm"
-											class="text-destructive"
-											title="Delete topic"
-										>
-											<Trash2 class="h-4 w-4" />
-										</Button>
-									</div>
-								</TableCell>
-							</TableRow>
-						{/each}
-					</TableBody>
-				</Table>
-			</div>
-		{/if}
-	</div>
+  {#if loading}
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {#each Array(6) as _}
+        <Skeleton class="h-48" />
+      {/each}
+    </div>
+  {:else if topics.length === 0}
+    <Card class="p-12 text-center">
+      <MessageSquare class="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+      <h3 class="text-xl font-semibold mb-2">No topics yet</h3>
+      <p class="text-muted-foreground mb-6">
+        Start a new discussion to gather expert insights
+      </p>
+      {#if authStore.user}
+        <Button href="/topics/new">
+          <Plus class="h-4 w-4 mr-2" />
+          Create First Topic
+        </Button>
+      {/if}
+    </Card>
+  {:else}
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {#each topics as topic}
+        <Card 
+          class="p-6 hover:shadow-lg transition-shadow cursor-pointer"
+          onclick={() => navigateToTopic(topic.id!)}
+        >
+          <div class="space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <h3 class="font-semibold line-clamp-2">{topic.title}</h3>
+              <Badge variant={topic.status === 'active' ? 'default' : 'secondary'}>
+                {topic.status}
+              </Badge>
+            </div>
+            
+            <p class="text-sm text-muted-foreground line-clamp-3">
+              {topic.description}
+            </p>
+            
+            <div class="flex items-center gap-4 text-xs text-muted-foreground">
+              {#if panelMap[topic.panelId]}
+                <span class="flex items-center gap-1">
+                  <Users class="h-3 w-3" />
+                  {panelMap[topic.panelId].name}
+                </span>
+              {/if}
+              <span class="flex items-center gap-1">
+                <TrendingUp class="h-3 w-3" />
+                Round {topic.roundNumber}
+              </span>
+              <span class="flex items-center gap-1">
+                <Clock class="h-3 w-3" />
+                {new Date(topic.updatedAt).toLocaleDateString()}
+              </span>
+            </div>
+            
+            {#if topic.aiExtracted}
+              <Badge variant="outline" class="text-xs">
+                AI Generated
+              </Badge>
+            {/if}
+          </div>
+        </Card>
+      {/each}
+    </div>
+  {/if}
 </div>
