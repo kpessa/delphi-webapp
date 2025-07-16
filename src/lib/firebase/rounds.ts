@@ -13,7 +13,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { db, auth } from './config';
-import type { Round, Topic, Feedback } from './types';
+import type { Round, Topic, Feedback, Panel } from './types';
 
 export async function createNewRound(topicId: string): Promise<Round> {
   if (typeof window === 'undefined') {
@@ -59,7 +59,7 @@ export async function createNewRound(topicId: string): Promise<Round> {
       // Update topic round number
       transaction.update(topicRef, {
         roundNumber: newRoundNumber,
-        updatedAt: serverTimestamp()
+        updatedAt: new Date()
       });
       
       // Create the round document
@@ -223,11 +223,14 @@ export async function calculateConsensus(topicId: string, roundNumber: number): 
     const normalizedStdDev = standardDeviation / (maxPossibleStdDev || 1);
     const consensusLevel = Math.round((1 - normalizedStdDev) * 100);
     
-    // Get topic to calculate participation rate
+    // Get topic to calculate participation rate from panel
     const topicDoc = await getDoc(doc(db, 'topics', topicId));
     const topic = topicDoc.data() as Topic;
+    
+    // Get panel to calculate total experts
     const panelDoc = await getDoc(doc(db, 'panels', topic.panelId));
-    const totalExperts = panelDoc.data()?.expertIds?.length || 1;
+    const panel = panelDoc.data() as Panel;
+    const totalExperts = (panel?.adminIds?.length || 0) + (panel?.expertIds?.length || 0) || 1;
     const participationRate = Math.round((totalParticipants / totalExperts) * 100);
     
     return {

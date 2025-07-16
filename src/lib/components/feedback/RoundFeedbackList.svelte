@@ -118,9 +118,9 @@
     </Card>
   {:else}
     {#each Object.entries(groupedFeedback) as [type, items]}
+      {@const Icon = getTypeIcon(type)}
       <div>
         <h4 class="font-medium mb-3 flex items-center gap-2">
-          {@const Icon = getTypeIcon(type)}
           <Icon class="h-4 w-4" />
           {type.charAt(0).toUpperCase() + type.slice(1)}s ({items.length})
         </h4>

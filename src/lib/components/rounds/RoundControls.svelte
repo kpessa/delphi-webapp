@@ -66,11 +66,11 @@
     
     try {
       if (dialogAction === 'start') {
-        await createNewRound(topic.id!);
+        await createNewRound(item.id!);
         toast.success('New round started successfully');
       } else {
         // Check consensus before closing
-        const consensus = await calculateConsensus(topic.id!, currentRound!.roundNumber);
+        const consensus = await calculateConsensus(item.id!, currentRound!.roundNumber);
         
         if (consensus.participationRate < minParticipation && enableAutoClose) {
           toast.error(`Minimum participation rate (${minParticipation}%) not met`);
@@ -78,12 +78,12 @@
           return;
         }
         
-        await completeRound(topic.id!, currentRound!.roundNumber);
+        await completeRound(item.id!, currentRound!.roundNumber);
         toast.success('Round closed successfully');
         
         // Auto-start new round if consensus not reached
         if (consensus.consensusLevel < consensusThreshold && enableAutoClose) {
-          await createNewRound(topic.id!);
+          await createNewRound(item.id!);
           toast.info('New round started - consensus threshold not yet reached');
         } else if (consensus.consensusLevel >= consensusThreshold) {
           toast.success(`Consensus achieved at ${consensus.consensusLevel}%!`);
@@ -91,7 +91,7 @@
       }
       
       // Refresh round data
-      currentRound = await getCurrentRound(topic.id!);
+      currentRound = await getCurrentRound(item.id!);
       onRoundChange?.();
     } catch (error) {
       console.error('Error managing round:', error);
@@ -101,7 +101,7 @@
     }
   }
 
-  let canStartNewRound = $derived(isAdmin && !currentRound && topic.status === 'open');
+  let canStartNewRound = $derived(isAdmin && !currentRound && item.status === 'active');
   let canCloseRound = $derived(isAdmin && currentRound?.status === 'active');
 </script>
 

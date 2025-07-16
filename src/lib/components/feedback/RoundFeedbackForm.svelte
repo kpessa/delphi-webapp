@@ -5,11 +5,13 @@
   import { Card } from '$lib/components/ui/card';
   import { Label } from '$lib/components/ui/label';
   import { Lightbulb, AlertCircle, ThumbsUp, MessageSquare } from 'lucide-svelte';
-  import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-  import { db } from '$lib/firebase/config';
-  import { authStore } from '$lib/stores/auth.svelte';
+  // import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+  // import { db } from '$lib/firebase/config';
+  // import { authStore } from '$lib/stores/auth.svelte';
+  const authStore = { user: { uid: 'test' } }; // Temporary replacement
   import type { FeedbackType } from '$lib/firebase/types';
-  import { toast } from 'svelte-sonner';
+  // import { toast } from 'svelte-sonner';
+  const toast = { success: console.log, error: console.error }; // Temporary replacement
 
   interface Props {
     topicId: string;

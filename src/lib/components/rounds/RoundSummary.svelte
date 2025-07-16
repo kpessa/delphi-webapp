@@ -195,11 +195,10 @@
 
       <!-- Detailed Feedback -->
       <Collapsible bind:open={detailsExpanded}>
-        <CollapsibleTrigger asChild let:builder>
+        <CollapsibleTrigger asChild>
           <Button 
             variant="ghost" 
             class="w-full justify-between"
-            builders={[builder]}
           >
             <span>View detailed feedback</span>
             {#if detailsExpanded}
@@ -212,9 +211,9 @@
         <CollapsibleContent>
           <div class="mt-4 space-y-4">
             {#each Object.entries(groupedFeedback) as [type, items]}
+              {@const Icon = getTypeIcon(type)}
               <div>
                 <h5 class="font-medium mb-2 capitalize flex items-center gap-2">
-                  {@const Icon = getTypeIcon(type)}
                   <Icon class="h-4 w-4" />
                   {type}s
                 </h5>

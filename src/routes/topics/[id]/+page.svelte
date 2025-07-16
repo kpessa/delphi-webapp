@@ -20,9 +20,9 @@
   import RoundSummary from '$lib/components/rounds/RoundSummary.svelte';
   import { getCurrentRound, calculateConsensus, type ConsensusMetrics } from '$lib/firebase/rounds';
   
-  // Import feedback component (assuming it exists)
-  import FeedbackForm from '$lib/components/feedback/FeedbackForm.svelte';
-  import FeedbackList from '$lib/components/feedback/FeedbackList.svelte';
+  // Import round feedback components
+  import RoundFeedbackForm from '$lib/components/feedback/RoundFeedbackForm.svelte';
+  import RoundFeedbackList from '$lib/components/feedback/RoundFeedbackList.svelte';
 
   let topic: Topic | null = $state(null);
   let panel: Panel | null = $state(null);
@@ -231,8 +231,8 @@
                   </div>
                   
                   {#if canProvideFeedback && selectedRound?.status === 'active'}
-                    <FeedbackForm 
-                      topicId={topic.id} 
+                    <RoundFeedbackForm 
+                      topicId={topic.id!} 
                       roundNumber={selectedRound.roundNumber}
                     />
                   {:else if selectedRound?.status === 'completed'}
@@ -246,8 +246,8 @@
                   {/if}
                   
                   {#if selectedRound}
-                    <FeedbackList 
-                      topicId={topic.id} 
+                    <RoundFeedbackList 
+                      topicId={topic.id!} 
                       roundNumber={selectedRound.roundNumber}
                       canVote={canProvideFeedback}
                     />
@@ -257,7 +257,7 @@
               
               <TabsContent value="summary" class="p-6">
                 {#if selectedRound}
-                  <RoundSummary round={selectedRound} topicId={topic.id} />
+                  <RoundSummary round={selectedRound} topicId={topic.id!} />
                 {:else}
                   <p class="text-center text-muted-foreground py-8">
                     No round selected
