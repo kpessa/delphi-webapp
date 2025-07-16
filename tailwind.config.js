@@ -51,6 +51,70 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      keyframes: {
+        "in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        "out": {
+          "0%": { opacity: "1" },
+          "100%": { opacity: "0" },
+        },
+        "slide-in-from-top": {
+          "0%": { transform: "translateY(-100%)" },
+          "100%": { transform: "translateY(0)" },
+        },
+        "slide-in-from-bottom": {
+          "0%": { transform: "translateY(100%)" },
+          "100%": { transform: "translateY(0)" },
+        },
+        "slide-in-from-left": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(0)" },
+        },
+        "slide-in-from-right": {
+          "0%": { transform: "translateX(100%)" },
+          "100%": { transform: "translateX(0)" },
+        },
+        "slide-out-to-top": {
+          "0%": { transform: "translateY(0)" },
+          "100%": { transform: "translateY(-100%)" },
+        },
+        "slide-out-to-bottom": {
+          "0%": { transform: "translateY(0)" },
+          "100%": { transform: "translateY(100%)" },
+        },
+        "slide-out-to-left": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-100%)" },
+        },
+        "slide-out-to-right": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(100%)" },
+        },
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        "fade-out": {
+          "0%": { opacity: "1" },
+          "100%": { opacity: "0" },
+        },
+      },
+      animation: {
+        "in": "in 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "out": "out 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "fade-in": "fade-in 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "fade-out": "fade-out 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-in-from-top": "slide-in-from-top 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-in-from-bottom": "slide-in-from-bottom 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-in-from-left": "slide-in-from-left 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-in-from-right": "slide-in-from-right 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-out-to-top": "slide-out-to-top 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-out-to-bottom": "slide-out-to-bottom 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-out-to-left": "slide-out-to-left 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-out-to-right": "slide-out-to-right 150ms cubic-bezier(0.16, 1, 0.3, 1)",
+      },
     },
   },
   plugins: [],
