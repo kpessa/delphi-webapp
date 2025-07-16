@@ -199,29 +199,62 @@ export async function calculateConsensus(topicId: string, roundNumber: number): 
       };
     }
     
-    // Get unique participants
-    const uniqueExperts = new Set(feedback.map(f => f.expertId));
+    // Collect all agreement levels from all feedback items
+    const allAgreements: number[] = [];
+    const uniqueExperts = new Set<string>();
+    
+    feedback.forEach(item => {
+      uniqueExperts.add(item.expertId);
+      if (item.agreements) {
+        Object.values(item.agreements).forEach(level => {
+          allAgreements.push(level as number);
+        });
+      }
+    });
+    
     const totalParticipants = uniqueExperts.size;
     
-    // Calculate vote distribution
-    const voteCounts = feedback.map(f => f.voteCount);
-    const totalVotes = voteCounts.reduce((sum, count) => sum + count, 0);
-    const avgVotes = totalVotes / feedback.length;
+    if (allAgreements.length === 0) {
+      return {
+        consensusLevel: 0,
+        participationRate: 0,
+        agreementScore: 0,
+        standardDeviation: 0,
+        totalParticipants,
+        totalFeedback: feedback.length
+      };
+    }
     
-    // Calculate standard deviation
-    const variance = voteCounts.reduce((sum, count) => {
-      return sum + Math.pow(count - avgVotes, 2);
-    }, 0) / feedback.length;
+    // Calculate statistics on agreement levels
+    const avgAgreement = allAgreements.reduce((sum, level) => sum + level, 0) / allAgreements.length;
+    
+    // Calculate standard deviation of agreement levels
+    const variance = allAgreements.reduce((sum, level) => {
+      return sum + Math.pow(level - avgAgreement, 2);
+    }, 0) / allAgreements.length;
     const standardDeviation = Math.sqrt(variance);
     
-    // Calculate agreement score based on vote concentration
-    const maxVotes = Math.max(...voteCounts);
-    const agreementScore = maxVotes / (totalVotes || 1);
+    // Calculate consensus level based on research-informed metrics
+    // 1. Low standard deviation indicates consensus (research: SD ≤ 1.0 for 5-point scales)
+    const sdConsensus = Math.max(0, (1.0 - Math.min(standardDeviation, 1.0)) * 100);
     
-    // Calculate consensus level (inverse of normalized standard deviation)
-    const maxPossibleStdDev = Math.sqrt(totalVotes * totalVotes / feedback.length);
-    const normalizedStdDev = standardDeviation / (maxPossibleStdDev || 1);
-    const consensusLevel = Math.round((1 - normalizedStdDev) * 100);
+    // 2. High absolute average agreement indicates strong consensus
+    const avgConsensus = Math.abs(avgAgreement) / 2 * 100; // Normalize to 0-100
+    
+    // 3. Agreement concentration (% of experts agreeing in same direction)
+    const positiveCount = allAgreements.filter(level => level > 0).length;
+    const negativeCount = allAgreements.filter(level => level < 0).length;
+    const neutralCount = allAgreements.filter(level => level === 0).length;
+    const maxDirectionCount = Math.max(positiveCount, negativeCount, neutralCount);
+    const directionConsensus = (maxDirectionCount / allAgreements.length) * 100;
+    
+    // Combined consensus score (weighted average)
+    const consensusLevel = Math.round(
+      (sdConsensus * 0.4) + (avgConsensus * 0.3) + (directionConsensus * 0.3)
+    );
+    
+    // Agreement score (strength of consensus direction)
+    const agreementScore = Math.abs(avgAgreement) / 2; // 0-1 scale
     
     // Get topic to calculate participation rate from panel
     const topicDoc = await getDoc(doc(db, 'topics', topicId));

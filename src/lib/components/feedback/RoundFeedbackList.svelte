@@ -1,15 +1,14 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, arrayUnion, arrayRemove } from 'firebase/firestore';
+  import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
   import { db } from '$lib/firebase/config';
   import { authStore } from '$lib/stores/auth.svelte';
-  import type { Feedback } from '$lib/firebase/types';
+  import type { Feedback, AgreementLevel } from '$lib/firebase/types';
   import { Card } from '$lib/components/ui/card';
-  import { Button } from '$lib/components/ui/button';
-  import { Badge } from '$lib/components/ui/badge';
   import { Skeleton } from '$lib/components/ui/skeleton';
-  import { ThumbsUp, Lightbulb, AlertCircle, MessageSquare } from 'lucide-svelte';
-  import { toast } from 'svelte-sonner';
+  import { Lightbulb, AlertCircle, ThumbsUp, MessageSquare } from 'lucide-svelte';
+  import FeedbackAgreementCard from './FeedbackAgreementCard.svelte';
+  import { getPreviousRoundAgreements } from '$lib/firebase/vote-continuity';
 
   interface Props {
     topicId: string;
@@ -22,14 +21,27 @@
   let feedback: Feedback[] = $state([]);
   let loading: boolean = $state(true);
   let unsubscribe: (() => void) | null = null;
+  let previousAgreements: Record<string, AgreementLevel> = $state({});
 
-  onMount(() => {
+  onMount(async () => {
+    // Load previous round agreements for vote continuity
+    if (authStore.user && roundNumber > 1) {
+      try {
+        previousAgreements = await getPreviousRoundAgreements(
+          topicId,
+          roundNumber,
+          authStore.user.uid
+        );
+      } catch (error) {
+        console.error('Error loading previous agreements:', error);
+      }
+    }
+
     const feedbackRef = collection(db, 'feedback');
     const q = query(
       feedbackRef,
       where('topicId', '==', topicId),
       where('roundNumber', '==', roundNumber),
-      orderBy('voteCount', 'desc'),
       orderBy('createdAt', 'desc')
     );
 
@@ -54,30 +66,22 @@
     unsubscribe?.();
   });
 
-  async function handleVote(feedbackId: string, hasVoted: boolean) {
-    if (!canVote || !authStore.user) return;
-
-    try {
-      const feedbackRef = doc(db, 'feedback', feedbackId);
-      const currentFeedback = feedback.find(f => f.id === feedbackId);
-      if (!currentFeedback) return;
-
-      if (hasVoted) {
-        await updateDoc(feedbackRef, {
-          voteCount: currentFeedback.voteCount - 1,
-          voters: arrayRemove(authStore.user.uid)
-        });
-      } else {
-        await updateDoc(feedbackRef, {
-          voteCount: currentFeedback.voteCount + 1,
-          voters: arrayUnion(authStore.user.uid)
-        });
-      }
-    } catch (error) {
-      console.error('Error voting:', error);
-      toast.error('Failed to record vote');
-    }
-  }
+  // Sort feedback by agreement consensus (average agreement level)
+  const sortedFeedback = $derived(
+    [...feedback].sort((a, b) => {
+      const aAgreements = Object.values(a.agreements || {});
+      const bAgreements = Object.values(b.agreements || {});
+      
+      if (aAgreements.length === 0 && bAgreements.length === 0) return 0;
+      if (aAgreements.length === 0) return 1;
+      if (bAgreements.length === 0) return -1;
+      
+      const aAvg = aAgreements.reduce((sum, level) => sum + level, 0) / aAgreements.length;
+      const bAvg = bAgreements.reduce((sum, level) => sum + level, 0) / bAgreements.length;
+      
+      return bAvg - aAvg; // Higher agreement first
+    })
+  );
 
   function getTypeIcon(type: string) {
     switch (type) {
@@ -88,16 +92,7 @@
     }
   }
 
-  function getTypeColor(type: string) {
-    switch (type) {
-      case 'idea': return 'bg-blue-100 text-blue-800';
-      case 'concern': return 'bg-red-100 text-red-800';
-      case 'solution': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  }
-
-  let groupedFeedback = $derived(feedback.reduce((acc, item) => {
+  let groupedFeedback = $derived(sortedFeedback.reduce((acc, item) => {
     if (!acc[item.type]) acc[item.type] = [];
     acc[item.type].push(item);
     return acc;
@@ -127,36 +122,12 @@
         
         <div class="space-y-3">
           {#each items as item}
-            {@const hasVoted = authStore.user ? item.voters.includes(authStore.user.uid) : false}
-            
-            <Card class="p-4">
-              <div class="flex items-start gap-3">
-                <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-2">
-                    <Badge variant="secondary" class={`${getTypeColor(item.type)} text-xs`}>
-                      {item.type}
-                    </Badge>
-                    <span class="text-xs text-muted-foreground">
-                      {new Date(item.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                  <p class="text-sm">{item.content}</p>
-                </div>
-                
-                <div class="flex flex-col items-center gap-1">
-                  <Button
-                    variant={hasVoted ? "default" : "outline"}
-                    size="sm"
-                    onclick={() => handleVote(item.id!, hasVoted)}
-                    disabled={!canVote}
-                    class="h-auto px-2 py-1"
-                  >
-                    <ThumbsUp class="h-3 w-3" />
-                  </Button>
-                  <span class="text-xs font-medium">{item.voteCount}</span>
-                </div>
-              </div>
-            </Card>
+            <FeedbackAgreementCard
+              feedback={item}
+              canVote={canVote}
+              showAgreementScale={canVote}
+              previousRoundAgreement={previousAgreements[item.id!]}
+            />
           {/each}
         </div>
       </div>

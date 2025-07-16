@@ -27,16 +27,16 @@
   let userVote = $state<'up' | 'down' | null>(null);
 
   // Calculate vote counts and user vote state
-  const upvoteCount = $derived(feedback.upvotes.length);
-  const downvoteCount = $derived(feedback.downvotes.length);
+  const upvoteCount = $derived(feedback.upvotes?.length || 0);
+  const downvoteCount = $derived(feedback.downvotes?.length || 0);
   const netVoteCount = $derived(upvoteCount - downvoteCount);
 
   $effect(() => {
     if (authStore.user) {
       const userId = authStore.user.uid;
-      if (feedback.upvotes.includes(userId)) {
+      if (feedback.upvotes?.includes(userId)) {
         userVote = 'up';
-      } else if (feedback.downvotes.includes(userId)) {
+      } else if (feedback.downvotes?.includes(userId)) {
         userVote = 'down';
       } else {
         userVote = null;

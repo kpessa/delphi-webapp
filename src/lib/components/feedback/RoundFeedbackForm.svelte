@@ -41,6 +41,7 @@
         content: content.trim(),
         upvotes: [],
         downvotes: [],
+        agreements: {}, // Initialize empty agreements object
         createdAt: serverTimestamp()
       };
 

@@ -45,11 +45,11 @@ export async function createTopic(topic: Omit<Topic, 'id' | 'createdAt' | 'updat
 	
 	// Create topic and first round in a transaction
 	return await runTransaction(db, async (transaction) => {
-		// Create the topic with 2 rounds by default
+		// Create the topic with configured rounds (default 2)
 		const topicRef = doc(collection(db, TOPICS_COLLECTION));
 		const topicDataWithRounds = {
 			...topicData,
-			totalRounds: 2,
+			totalRounds: topicData.totalRounds || 2,
 			roundNumber: 1
 		};
 		transaction.set(topicRef, topicDataWithRounds);
