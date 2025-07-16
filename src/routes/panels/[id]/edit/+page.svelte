@@ -8,7 +8,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { getPanel, updatePanel, removeExpertFromPanel, type Panel } from '$lib/firebase/panels';
-	import { getExpertsByIds, removePanelFromExpert, type Expert } from '$lib/firebase/experts';
+	import { getExpertsByPanel, removePanelFromExpert, type Expert } from '$lib/firebase/experts';
 	import { ArrowLeft, Save, Trash2 } from 'lucide-svelte';
 
 	let panel: Panel | null = null;
@@ -47,7 +47,7 @@
 
 			name = panel.name;
 			description = panel.description;
-			experts = await getExpertsByIds(panel.expertIds);
+			experts = await getExpertsByPanel(panelId);
 		} catch (error) {
 			console.error('Error loading panel:', error);
 			goto('/panels');

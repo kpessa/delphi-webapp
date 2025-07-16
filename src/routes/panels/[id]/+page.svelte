@@ -16,7 +16,7 @@
 	} from '$lib/components/ui/table';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { getPanel, getInvitationsByPanel, type Panel, type PanelInvitation } from '$lib/firebase/panels';
-	import { getExpertsByIds, sendBulkInvitations, type Expert } from '$lib/firebase/experts';
+	import { getExpertsByPanel, sendBulkInvitations, type Expert } from '$lib/firebase/experts';
 	import { ArrowLeft, Edit, UserPlus, Mail, CheckCircle, Clock, XCircle } from 'lucide-svelte';
 	
 	let panel: Panel | null = null;
@@ -49,7 +49,7 @@
 			}
 
 			[experts, invitations] = await Promise.all([
-				getExpertsByIds(panel.expertIds),
+				getExpertsByPanel(panelId),
 				getInvitationsByPanel(panelId)
 			]);
 		} catch (error) {
