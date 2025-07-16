@@ -76,27 +76,24 @@
 	<title>Create Topic - Delphi Platform</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-50">
-	<header class="bg-white shadow">
-		<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-			<h1 class="text-3xl font-bold text-gray-900">Create New Topic</h1>
-			<p class="mt-1 text-sm text-gray-600">
-				Create a topic for expert discussion using AI extraction or manual entry
-			</p>
-		</div>
-	</header>
+<div class="py-6 md:py-8">
+	<div class="mb-6">
+		<h1 class="text-2xl md:text-3xl font-bold mb-2">Create New Topic</h1>
+		<p class="text-sm md:text-base text-muted-foreground">
+			Create a topic for expert discussion using AI extraction or manual entry
+		</p>
+	</div>
 
-	<main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-		<div class="rounded-lg bg-white p-6 shadow">
+	<div class="rounded-lg bg-card p-4 md:p-6 shadow-sm border">
 			{#if user}
 				{#if loadingPanels}
-					<div class="text-center py-8">
-						<p class="text-gray-500">Loading panels...</p>
+					<div class="text-center py-6 md:py-8">
+						<p class="text-muted-foreground">Loading panels...</p>
 					</div>
 				{:else if panels.length === 0}
-					<div class="text-center py-8">
-						<p class="text-gray-500 mb-4">You need to be part of a panel to create topics.</p>
-						<a href="/panels" class="text-blue-600 hover:underline">View Panels</a>
+					<div class="text-center py-6 md:py-8">
+						<p class="text-muted-foreground mb-4">You need to be part of a panel to create topics.</p>
+						<a href="/panels" class="text-primary hover:underline">View Panels</a>
 					</div>
 				{:else}
 					<TopicForm 
@@ -110,5 +107,4 @@
 				{/if}
 			{/if}
 		</div>
-	</main>
 </div>

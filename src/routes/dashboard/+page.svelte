@@ -39,12 +39,12 @@
 	<title>Dashboard - Delphi Platform</title>
 </svelte:head>
 
-<div class="py-8">
-		<h1 class="text-3xl font-bold mb-6">Dashboard</h1>
+<div class="py-6 md:py-8">
+		<h1 class="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Dashboard</h1>
 		
 		{#if user}
-			<div class="rounded-lg bg-card p-6 shadow-sm border">
-				<h2 class="text-lg font-medium">Welcome!</h2>
+			<div class="rounded-lg bg-card p-4 md:p-6 shadow-sm border">
+				<h2 class="text-base md:text-lg font-medium">Welcome!</h2>
 				<p class="mt-1 text-muted-foreground">
 					Signed in as: {user.email || user.displayName || 'User'}
 				</p>
@@ -53,8 +53,8 @@
 				</p>
 			</div>
 			
-			<div class="mt-6 grid gap-6 md:grid-cols-3">
-				<div class="rounded-lg bg-card p-6 shadow-sm border">
+			<div class="mt-4 md:mt-6 grid gap-4 md:gap-6 md:grid-cols-3">
+				<div class="rounded-lg bg-card p-4 md:p-6 shadow-sm border">
 					<div class="flex items-center justify-between">
 						<h3 class="text-sm font-medium text-muted-foreground">Expert Panels</h3>
 						<Users class="h-4 w-4 text-muted-foreground" />
@@ -70,8 +70,8 @@
 					</Button>
 				</div>
 				
-				<div class="rounded-lg bg-card p-6 shadow-sm border">
-					<h3 class="text-lg font-medium">Quick Actions</h3>
+				<div class="rounded-lg bg-card p-4 md:p-6 shadow-sm border">
+					<h3 class="text-base md:text-lg font-medium">Quick Actions</h3>
 					<div class="mt-4 space-y-2">
 						<Button href="/topics" variant="outline" class="w-full justify-start">
 							View All Topics
@@ -82,9 +82,9 @@
 					</div>
 				</div>
 				
-				<div class="rounded-lg bg-primary/5 p-6 border border-primary/10">
-					<h3 class="text-lg font-medium">Next Steps</h3>
-					<ul class="mt-2 list-inside list-disc space-y-1 text-muted-foreground">
+				<div class="rounded-lg bg-primary/5 p-4 md:p-6 border border-primary/10">
+					<h3 class="text-base md:text-lg font-medium">Next Steps</h3>
+					<ul class="mt-2 list-inside list-disc space-y-1 text-sm md:text-base text-muted-foreground">
 						<li>Create topics from meeting notes or email threads using AI</li>
 						<li>Invite experts to join discussion panels</li>
 						<li>Collect feedback through multiple rounds</li>

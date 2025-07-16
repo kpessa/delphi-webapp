@@ -4,9 +4,9 @@
   import { authStore } from '$lib/stores/auth.svelte';
 </script>
 
-<div class="container mx-auto px-4 py-8">
-  <h1 class="text-4xl font-bold mb-2">Anonymous Group Feedback Platform</h1>
-  <p class="text-lg text-muted-foreground mb-8">
+<div class="py-6 md:py-8">
+  <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">Anonymous Group Feedback Platform</h1>
+  <p class="text-base md:text-lg text-muted-foreground mb-6 md:mb-8">
     Gather honest opinions and reach consensus using the proven Delphi method
   </p>
   
@@ -54,10 +54,10 @@
     </Card>
   </div>
 
-  <div class="mt-12 space-y-8">
+  <div class="mt-8 md:mt-12 space-y-6 md:space-y-8">
     <div class="text-center">
-      <h2 class="text-2xl font-semibold mb-4">How It Works</h2>
-      <div class="grid gap-4 md:grid-cols-4 max-w-4xl mx-auto">
+      <h2 class="text-xl md:text-2xl font-semibold mb-4">How It Works</h2>
+      <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-4 max-w-4xl mx-auto">
         <div class="text-center">
           <div class="text-3xl font-bold text-primary mb-2">1</div>
           <h3 class="font-semibold mb-1">Create Topic</h3>
@@ -82,7 +82,7 @@
     </div>
   </div>
 
-  <div class="mt-12 flex gap-4 justify-center">
+  <div class="mt-8 md:mt-12 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
     {#if authStore.isAuthenticated}
       <Button href="/dashboard">Go to Dashboard</Button>
     {:else}

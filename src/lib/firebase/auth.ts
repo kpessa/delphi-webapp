@@ -19,6 +19,9 @@ import { FirebaseError } from 'firebase/app';
 import { auth } from './config';
 import { browser } from '$app/environment';
 
+// Re-export auth for external use
+export { auth };
+
 export interface AuthUser {
   uid: string;
   email: string | null;

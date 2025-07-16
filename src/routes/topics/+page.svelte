@@ -65,10 +65,10 @@
   <title>Topics - Delphi Platform</title>
 </svelte:head>
 
-<div class="container mx-auto py-8 px-4">
-  <div class="flex justify-between items-center mb-8">
+<div class="py-6 md:py-8">
+  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 md:mb-8">
     <div>
-      <h1 class="text-3xl font-bold mb-2">Topics</h1>
+      <h1 class="text-2xl md:text-3xl font-bold mb-1 md:mb-2">Topics</h1>
       <p class="text-muted-foreground">
         Explore and contribute to strategic discussions
       </p>
@@ -89,9 +89,9 @@
       {/each}
     </div>
   {:else if topics.length === 0}
-    <Card class="p-12 text-center">
-      <MessageSquare class="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-      <h3 class="text-xl font-semibold mb-2">No topics yet</h3>
+    <Card class="p-8 md:p-12 text-center">
+      <MessageSquare class="h-12 w-12 md:h-16 md:w-16 mx-auto mb-4 text-muted-foreground" />
+      <h3 class="text-lg md:text-xl font-semibold mb-2">No topics yet</h3>
       <p class="text-muted-foreground mb-6">
         Start a new discussion to gather expert insights
       </p>
@@ -106,7 +106,7 @@
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {#each topics as topic}
         <Card 
-          class="p-6 hover:shadow-lg transition-shadow cursor-pointer"
+          class="p-4 md:p-6 hover:shadow-lg transition-shadow cursor-pointer"
           onclick={() => navigateToTopic(topic.id!)}
         >
           <div class="space-y-3">
