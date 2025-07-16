@@ -1,178 +1,134 @@
+import { db, auth } from './config';
 import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  arrayUnion,
-  arrayRemove,
-  type QueryConstraint
+	collection,
+	doc,
+	getDoc,
+	getDocs,
+	addDoc,
+	updateDoc,
+	deleteDoc,
+	query,
+	where,
+	orderBy,
+	serverTimestamp,
+	arrayUnion,
+	arrayRemove
 } from 'firebase/firestore';
-import { db } from './config';
 import type { Panel } from './types';
 
-export type { Panel };
-
-const COLLECTION_NAME = 'panels';
+const PANELS_COLLECTION = 'panels';
 
 export async function createPanel(panel: Omit<Panel, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-  const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-    ...panel,
-    expertIds: panel.expertIds || [],
-    createdAt: new Date(),
-    updatedAt: new Date()
-  });
-  return docRef.id;
+	if (!auth.currentUser) {
+		throw new Error('User must be authenticated to create a panel');
+	}
+
+	const docRef = await addDoc(collection(db, PANELS_COLLECTION), {
+		...panel,
+		creatorId: auth.currentUser.uid,
+		createdAt: serverTimestamp(),
+		updatedAt: serverTimestamp()
+	});
+
+	return docRef.id;
 }
 
 export async function updatePanel(id: string, updates: Partial<Panel>): Promise<void> {
-  const docRef = doc(db, COLLECTION_NAME, id);
-  await updateDoc(docRef, {
-    ...updates,
-    updatedAt: new Date()
-  });
+	if (!auth.currentUser) {
+		throw new Error('User must be authenticated to update a panel');
+	}
+
+	const panelRef = doc(db, PANELS_COLLECTION, id);
+	
+	// Remove fields that shouldn't be updated
+	const { id: _, createdAt, ...updateData } = updates;
+	
+	await updateDoc(panelRef, {
+		...updateData,
+		updatedAt: serverTimestamp()
+	});
 }
 
 export async function deletePanel(id: string): Promise<void> {
-  const docRef = doc(db, COLLECTION_NAME, id);
-  await deleteDoc(docRef);
+	if (!auth.currentUser) {
+		throw new Error('User must be authenticated to delete a panel');
+	}
+
+	await deleteDoc(doc(db, PANELS_COLLECTION, id));
 }
 
 export async function getPanel(id: string): Promise<Panel | null> {
-  const docRef = doc(db, COLLECTION_NAME, id);
-  const snapshot = await getDoc(docRef);
-  
-  if (!snapshot.exists()) {
-    return null;
-  }
-  
-  const data = snapshot.data();
-  return {
-    id: snapshot.id,
-    ...data,
-    createdAt: data.createdAt?.toDate() || new Date(),
-    updatedAt: data.updatedAt?.toDate() || new Date()
-  } as Panel;
+	const docSnap = await getDoc(doc(db, PANELS_COLLECTION, id));
+	
+	if (!docSnap.exists()) {
+		return null;
+	}
+
+	const data = docSnap.data();
+	return {
+		id: docSnap.id,
+		...data,
+		createdAt: data.createdAt?.toDate() || new Date(),
+		updatedAt: data.updatedAt?.toDate() || new Date()
+	} as Panel;
 }
 
-export async function getPanels(constraints: QueryConstraint[] = []): Promise<Panel[]> {
-  const q = query(collection(db, COLLECTION_NAME), ...constraints, orderBy('createdAt', 'desc'));
-  const snapshot = await getDocs(q);
-  
-  return snapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate() || new Date(),
-      updatedAt: data.updatedAt?.toDate() || new Date()
-    } as Panel;
-  });
+export async function getPanels(filters?: {
+	creatorId?: string;
+	status?: Panel['status'];
+}): Promise<Panel[]> {
+	const constraints = [orderBy('createdAt', 'desc')];
+
+	if (filters?.creatorId) {
+		constraints.push(where('creatorId', '==', filters.creatorId));
+	}
+
+	if (filters?.status) {
+		constraints.push(where('status', '==', filters.status));
+	}
+
+	const q = query(collection(db, PANELS_COLLECTION), ...constraints);
+	const querySnapshot = await getDocs(q);
+
+	return querySnapshot.docs.map(doc => {
+		const data = doc.data();
+		return {
+			id: doc.id,
+			...data,
+			createdAt: data.createdAt?.toDate() || new Date(),
+			updatedAt: data.updatedAt?.toDate() || new Date()
+		} as Panel;
+	});
 }
 
-export async function getPanelsByAdmin(adminId: string): Promise<Panel[]> {
-  return getPanels([where('adminIds', 'array-contains', adminId)]);
+export async function getPanelsByCreator(creatorId: string): Promise<Panel[]> {
+	return getPanels({ creatorId });
 }
 
-export async function getPanelsByExpert(expertId: string): Promise<Panel[]> {
-  return getPanels([where('expertIds', 'array-contains', expertId)]);
+export async function getActivePanels(): Promise<Panel[]> {
+	return getPanels({ status: 'active' });
 }
 
 export async function addExpertToPanel(panelId: string, expertId: string): Promise<void> {
-  const docRef = doc(db, COLLECTION_NAME, panelId);
-  await updateDoc(docRef, {
-    expertIds: arrayUnion(expertId),
-    updatedAt: new Date()
-  });
+	if (!auth.currentUser) {
+		throw new Error('User must be authenticated to add expert to panel');
+	}
+
+	const panelRef = doc(db, PANELS_COLLECTION, panelId);
+	await updateDoc(panelRef, {
+		expertIds: arrayUnion(expertId),
+		updatedAt: serverTimestamp()
+	});
 }
 
 export async function removeExpertFromPanel(panelId: string, expertId: string): Promise<void> {
-  const docRef = doc(db, COLLECTION_NAME, panelId);
-  await updateDoc(docRef, {
-    expertIds: arrayRemove(expertId),
-    updatedAt: new Date()
-  });
-}
+	if (!auth.currentUser) {
+		throw new Error('User must be authenticated to remove expert from panel');
+	}
 
-export async function addAdminToPanel(panelId: string, adminId: string): Promise<void> {
-  const docRef = doc(db, COLLECTION_NAME, panelId);
-  await updateDoc(docRef, {
-    adminIds: arrayUnion(adminId),
-    updatedAt: new Date()
-  });
-}
-
-export async function removeAdminFromPanel(panelId: string, adminId: string): Promise<void> {
-  const docRef = doc(db, COLLECTION_NAME, panelId);
-  await updateDoc(docRef, {
-    adminIds: arrayRemove(adminId),
-    updatedAt: new Date()
-  });
-}
-
-export interface PanelInvitation {
-  id?: string;
-  panelId: string;
-  email: string;
-  token: string;
-  status: 'pending' | 'accepted' | 'declined';
-  invitedBy: string;
-  createdAt: Date;
-  acceptedAt?: Date;
-}
-
-const INVITATIONS_COLLECTION = 'panelInvitations';
-
-export async function createPanelInvitation(invitation: Omit<PanelInvitation, 'id' | 'createdAt'>): Promise<string> {
-  const docRef = await addDoc(collection(db, INVITATIONS_COLLECTION), {
-    ...invitation,
-    createdAt: new Date()
-  });
-  return docRef.id;
-}
-
-export async function getInvitationByToken(token: string): Promise<PanelInvitation | null> {
-  const q = query(collection(db, INVITATIONS_COLLECTION), where('token', '==', token));
-  const snapshot = await getDocs(q);
-  
-  if (snapshot.empty) {
-    return null;
-  }
-  
-  const doc = snapshot.docs[0];
-  const data = doc.data();
-  return {
-    id: doc.id,
-    ...data,
-    createdAt: data.createdAt?.toDate() || new Date(),
-    acceptedAt: data.acceptedAt?.toDate()
-  } as PanelInvitation;
-}
-
-export async function acceptInvitation(invitationId: string): Promise<void> {
-  const docRef = doc(db, INVITATIONS_COLLECTION, invitationId);
-  await updateDoc(docRef, {
-    status: 'accepted',
-    acceptedAt: new Date()
-  });
-}
-
-export async function getInvitationsByPanel(panelId: string): Promise<PanelInvitation[]> {
-  const q = query(collection(db, INVITATIONS_COLLECTION), where('panelId', '==', panelId), orderBy('createdAt', 'desc'));
-  const snapshot = await getDocs(q);
-  
-  return snapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate() || new Date(),
-      acceptedAt: data.acceptedAt?.toDate()
-    } as PanelInvitation;
-  });
+	const panelRef = doc(db, PANELS_COLLECTION, panelId);
+	await updateDoc(panelRef, {
+		expertIds: arrayRemove(expertId),
+		updatedAt: serverTimestamp()
+	});
 }

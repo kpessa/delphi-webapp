@@ -1,7 +1,7 @@
 // Core Types for Delphi Platform
 
 export interface Topic {
-  id?: string;
+  id: string;
   title: string;
   description: string;
   question: string;
@@ -23,17 +23,17 @@ export interface Topic {
 export type FeedbackType = 'idea' | 'solution' | 'concern' | 'vote' | 'refinement';
 
 export interface Feedback {
-  id?: string;
+  id: string;
   topicId: string;
   panelId: string;
   expertId: string; // Anonymous to other experts
-  roundId?: string;
+  roundId: string;
   roundNumber: number;
   type: FeedbackType;
   content: string;
   voteCount: number;
   votedBy: string[]; // Track who voted (hidden from UI)
-  parentId?: string | null; // For threading refinements
+  parentId: string | null; // For threading refinements
   metadata?: {
     reasoning?: string;
     refinementCount?: number;
@@ -44,7 +44,7 @@ export interface Feedback {
 }
 
 export interface Panel {
-  id?: string;
+  id: string;
   name: string;
   description: string;
   creatorId: string;
@@ -55,7 +55,7 @@ export interface Panel {
 }
 
 export interface Expert {
-  id?: string;
+  id: string;
   panelId: string;
   email: string;
   name: string;
