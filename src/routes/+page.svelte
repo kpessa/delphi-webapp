@@ -5,53 +5,81 @@
 </script>
 
 <div class="container mx-auto px-4 py-8">
-  <h1 class="text-4xl font-bold mb-2">Healthcare System Decision Platform</h1>
+  <h1 class="text-4xl font-bold mb-2">Anonymous Group Feedback Platform</h1>
   <p class="text-lg text-muted-foreground mb-8">
-    Gather expert feedback across your healthcare network using the Delphi technique
+    Gather honest opinions and reach consensus using the proven Delphi method
   </p>
   
   <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
     <Card>
       <CardHeader>
-        <CardTitle>Multi-Facility Input</CardTitle>
+        <CardTitle>Structured Feedback</CardTitle>
         <CardDescription>
-          Coordinate across 30+ hospitals and behavioral health facilities
+          Organize complex discussions into clear topics
         </CardDescription>
       </CardHeader>
       <CardContent>
         <p class="text-sm text-muted-foreground">
-          Collect structured feedback from clinical, operational, and administrative leaders across your entire network.
+          Transform messy conversations into actionable questions. Our AI helps extract clear topics from emails, meeting notes, or any text.
         </p>
       </CardContent>
     </Card>
 
     <Card>
       <CardHeader>
-        <CardTitle>Strategic Initiatives</CardTitle>
+        <CardTitle>Anonymous Participation</CardTitle>
         <CardDescription>
-          Drive system-wide improvements
+          Remove bias and encourage honesty
         </CardDescription>
       </CardHeader>
       <CardContent>
         <p class="text-sm text-muted-foreground">
-          Launch assessments, consultations, and evaluations to inform critical healthcare decisions with data-driven insights.
+          Expert opinions are shared anonymously, eliminating hierarchy and politics. Get authentic feedback that drives real decisions.
         </p>
       </CardContent>
     </Card>
 
     <Card>
       <CardHeader>
-        <CardTitle>Anonymous & Unbiased</CardTitle>
+        <CardTitle>Iterative Refinement</CardTitle>
         <CardDescription>
-          Foster honest feedback
+          Build consensus through rounds
         </CardDescription>
       </CardHeader>
       <CardContent>
         <p class="text-sm text-muted-foreground">
-          Remove hierarchical and political pressures through anonymous participation, ensuring authentic perspectives.
+          Multiple rounds allow experts to refine their views based on group feedback. Watch consensus emerge naturally.
         </p>
       </CardContent>
     </Card>
+  </div>
+
+  <div class="mt-12 space-y-8">
+    <div class="text-center">
+      <h2 class="text-2xl font-semibold mb-4">How It Works</h2>
+      <div class="grid gap-4 md:grid-cols-4 max-w-4xl mx-auto">
+        <div class="text-center">
+          <div class="text-3xl font-bold text-primary mb-2">1</div>
+          <h3 class="font-semibold mb-1">Create Topic</h3>
+          <p class="text-sm text-muted-foreground">Paste any text and AI extracts the key question</p>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl font-bold text-primary mb-2">2</div>
+          <h3 class="font-semibold mb-1">Invite Experts</h3>
+          <p class="text-sm text-muted-foreground">Add panel members who can provide valuable input</p>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl font-bold text-primary mb-2">3</div>
+          <h3 class="font-semibold mb-1">Collect Feedback</h3>
+          <p class="text-sm text-muted-foreground">Ideas, solutions, and concerns shared anonymously</p>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl font-bold text-primary mb-2">4</div>
+          <h3 class="font-semibold mb-1">Reach Consensus</h3>
+          <p class="text-sm text-muted-foreground">Iterate until the group converges on solutions</p>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="mt-12 flex gap-4 justify-center">
