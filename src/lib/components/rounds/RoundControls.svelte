@@ -162,7 +162,7 @@
               min={1}
               max={30}
               step={1}
-              bind:value={[roundDuration]}
+              bind:value={roundDuration}
               class="w-full"
             />
           </div>
@@ -174,7 +174,7 @@
               min={50}
               max={100}
               step={5}
-              bind:value={[consensusThreshold]}
+              bind:value={consensusThreshold}
               class="w-full"
             />
           </div>
@@ -186,7 +186,7 @@
               min={0}
               max={100}
               step={10}
-              bind:value={[minParticipation]}
+              bind:value={minParticipation}
               class="w-full"
             />
           </div>

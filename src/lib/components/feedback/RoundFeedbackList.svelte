@@ -133,7 +133,7 @@
               <div class="flex items-start gap-3">
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-2">
-                    <Badge variant="secondary" class="{getTypeColor(item.type)} text-xs">
+                    <Badge variant="secondary" class={`${getTypeColor(item.type)} text-xs`}>
                       {item.type}
                     </Badge>
                     <span class="text-xs text-muted-foreground">

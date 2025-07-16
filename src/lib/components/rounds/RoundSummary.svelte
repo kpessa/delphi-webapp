@@ -185,7 +185,7 @@
         <div class="flex flex-wrap gap-2">
           {#each Object.entries(groupedFeedback) as [type, items]}
             {@const Icon = getTypeIcon(type)}
-            <Badge variant="secondary" class="{getTypeColor(type)}">
+            <Badge variant="secondary" class={getTypeColor(type)}>
               <Icon class="h-3 w-3 mr-1" />
               {type} ({items.length})
             </Badge>

@@ -64,7 +64,7 @@
 </script>
 
 <Card class="p-6">
-  <form onsubmit|preventDefault={handleSubmit} class="space-y-4">
+  <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">
     <div>
       <Label for="type">Feedback Type</Label>
       <Select bind:value={type}>
