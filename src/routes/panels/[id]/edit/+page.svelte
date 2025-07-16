@@ -8,7 +8,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { getPanel, updatePanel, removeExpertFromPanel, type Panel } from '$lib/firebase/panels';
-	import { getExpertsByPanel, removePanelFromExpert, type Expert } from '$lib/firebase/experts';
+	import { getExpertsByPanel, deleteExpert, type Expert } from '$lib/firebase/experts';
 	import { ArrowLeft, Save, Trash2 } from 'lucide-svelte';
 
 	let panel: Panel | null = null;
@@ -20,7 +20,9 @@
 	let error = '';
 
 	$: panelId = $page.params.id;
-	$: isAdmin = panel && authStore.user ? panel.adminIds.includes(authStore.user.uid) : false;
+	$: isAdmin = panel && authStore.user ? 
+		(panel.adminIds?.includes(authStore.user.uid) || panel.creatorId === authStore.user.uid) : 
+		false;
 
 	onMount(() => {
 		if (!authStore.isAuthenticated) {
@@ -88,10 +90,10 @@
 		}
 
 		try {
-			await Promise.all([
-				removeExpertFromPanel(panelId, expertId),
-				removePanelFromExpert(expertId, panelId)
-			]);
+			// Remove expert from panel's expertIds array
+			await removeExpertFromPanel(panelId, expertId);
+			// Delete the expert record (since experts are panel-specific)
+			await deleteExpert(expertId);
 			
 			panel.expertIds = panel.expertIds.filter(id => id !== expertId);
 			experts = experts.filter(e => e.id !== expertId);

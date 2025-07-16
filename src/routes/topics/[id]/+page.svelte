@@ -36,7 +36,7 @@
   let selectedRound: Round | null = $state(null);
   let consensusMetrics: ConsensusMetrics | null = $state(null);
   let loading = $state(true);
-  let error = $state('');
+  let error = $state<string | null>(null);
   let isAdmin = $state(false);
   let isExpert = $state(false);
   let activeTab = $state('discussion');
@@ -44,7 +44,7 @@
   let showRoundsView = $state(true); // Toggle between rounds and simple feedback
 
   const topicId = $page.params.id;
-  const isDisabled = $derived(topic?.status === 'completed' || !authStore.isAuthenticated);
+  const isDisabled = $derived(topic && topic.status === 'completed' || !authStore.isAuthenticated);
 
   onMount(() => {
     if (!topicId) {
@@ -61,7 +61,6 @@
         error = "Topic not found";
       } else {
         error = null;
-        checkUserRole();
         loadAdditionalData();
       }
     });
@@ -74,11 +73,13 @@
   async function loadAdditionalData() {
     if (!topic) return;
     
-    // Load panel
+    // Load panel first
     if (topic.panelId) {
       const panelDoc = await getDoc(doc(db, 'panels', topic.panelId));
       if (panelDoc.exists()) {
         panel = { id: panelDoc.id, ...panelDoc.data() } as Panel;
+        // Check user role after panel is loaded
+        checkUserRole();
       }
     }
     
@@ -89,10 +90,16 @@
   }
 
   async function checkUserRole() {
-    if (!authStore.user || !topic || !panel) return;
+    if (!authStore.user || !topic) return;
     
-    isAdmin = panel.adminIds?.includes(authStore.user.uid) || topic.creatorId === authStore.user.uid;
-    isExpert = panel.expertIds?.includes(authStore.user.uid);
+    // Check admin role - can be admin of panel or topic creator
+    if (panel) {
+      isAdmin = panel.adminIds?.includes(authStore.user.uid) || panel.creatorId === authStore.user.uid;
+      isExpert = panel.expertIds?.includes(authStore.user.uid);
+    } else {
+      // If no panel loaded yet, at least check if user created the topic
+      isAdmin = topic.createdBy === authStore.user.uid;
+    }
   }
 
   async function loadCurrentRound() {
@@ -123,8 +130,8 @@
     }
   }
 
-  let canProvideFeedback = $derived(isExpert && topic?.status === 'active' && currentRound?.status === 'active');
-  let showWaitingState = $derived(topic?.status === 'active' && !currentRound && showRoundsView);
+  let canProvideFeedback = $derived(isExpert && topic && topic.status === 'active' && currentRound?.status === 'active');
+  let showWaitingState = $derived(topic && topic.status === 'active' && !currentRound && showRoundsView);
 </script>
 
 <svelte:head>

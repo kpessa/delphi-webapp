@@ -33,8 +33,10 @@
 			const panelId = await createPanel({
 				name: name.trim(),
 				description: description.trim(),
+				creatorId: authStore.user.uid,
 				adminIds: [authStore.user.uid],
-				expertIds: []
+				expertIds: [],
+				status: 'active'
 			});
 
 			goto(`/panels/${panelId}`);

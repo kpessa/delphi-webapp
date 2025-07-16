@@ -39,7 +39,10 @@
 	}
 
 	function isAdmin(panel: Panel): boolean {
-		return authStore.user ? panel.adminIds.includes(authStore.user.uid) : false;
+		// Check both adminIds and creatorId for backward compatibility
+		return authStore.user ? 
+			(panel.adminIds?.includes(authStore.user.uid) || panel.creatorId === authStore.user.uid) : 
+			false;
 	}
 </script>
 
@@ -106,13 +109,17 @@
 									</div>
 								</TableCell>
 								<TableCell>
-									{#if isAdmin(panel)}
-										<Badge variant="default">Admin</Badge>
-									{:else if authStore.user && panel.expertIds.includes(authStore.user.uid)}
-										<Badge variant="secondary">Expert</Badge>
-									{:else}
-										<Badge variant="outline">None</Badge>
-									{/if}
+									<div class="flex items-center gap-1">
+										{#if isAdmin(panel)}
+											<Badge variant="default">Admin</Badge>
+										{/if}
+										{#if authStore.user && panel.expertIds.includes(authStore.user.uid)}
+											<Badge variant="secondary">Expert</Badge>
+										{/if}
+										{#if !isAdmin(panel) && (!authStore.user || !panel.expertIds.includes(authStore.user.uid))}
+											<Badge variant="outline">None</Badge>
+										{/if}
+									</div>
 								</TableCell>
 								<TableCell>
 									{new Date(panel.createdAt).toLocaleDateString()}

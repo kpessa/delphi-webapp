@@ -81,11 +81,11 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && (
-        resource.data.creatorId == request.auth.uid || 
+        resource.data.createdBy == request.auth.uid || 
         // Allow panel experts to update if they have access to the panel
         exists(/databases/$(database)/documents/panels/$(resource.data.panelId))
       );
-      allow delete: if isAuthenticated() && resource.data.creatorId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
     }
     
     // Panels collection (UPDATED for new system)

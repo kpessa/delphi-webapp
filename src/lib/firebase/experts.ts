@@ -14,7 +14,21 @@ import {
 	onSnapshot,
 	type Unsubscribe
 } from 'firebase/firestore';
-import type { Expert } from './types';
+export type Expert = {
+  id?: string;
+  panelId: string;
+  email: string;
+  name: string;
+  organization?: string;
+  expertise?: string;
+  status: 'invited' | 'accepted' | 'declined';
+  invitedBy: string;
+  invitedAt: Date;
+  acceptedAt?: Date;
+  userId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
 import { browser } from '$app/environment';
 
 const EXPERTS_COLLECTION = 'experts';

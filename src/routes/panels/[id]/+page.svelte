@@ -15,20 +15,25 @@
 		TableRow
 	} from '$lib/components/ui/table';
 	import { authStore } from '$lib/stores/auth.svelte';
-	import { getPanel, getInvitationsByPanel, type Panel, type PanelInvitation } from '$lib/firebase/panels';
-	import { getExpertsByPanel, sendBulkInvitations, type Expert } from '$lib/firebase/experts';
-	import { ArrowLeft, Edit, UserPlus, Mail, CheckCircle, Clock, XCircle } from 'lucide-svelte';
+	import { getPanel, addExpertToPanel, removeExpertFromPanel, type Panel } from '$lib/firebase/panels';
+	import { getExpertsByPanel, createExpert, deleteExpert, type Expert } from '$lib/firebase/experts';
+	import { toast } from 'svelte-sonner';
+	import { ArrowLeft, Edit, UserPlus, UserCheck, UserX, Mail, CheckCircle, Clock, XCircle } from 'lucide-svelte';
 	
 	let panel: Panel | null = null;
 	let experts: Expert[] = [];
-	let invitations: PanelInvitation[] = [];
+	// let invitations: PanelInvitation[] = []; // TODO: Implement invitations feature
 	let loading = true;
 	let showInviteDialog = false;
 	let inviteEmails = '';
 	let inviting = false;
 
 	$: panelId = $page.params.id;
-	$: isAdmin = panel && authStore.user ? panel.adminIds.includes(authStore.user.uid) : false;
+	$: isAdmin = panel && authStore.user ? 
+		(panel.adminIds?.includes(authStore.user.uid) || panel.creatorId === authStore.user.uid) : 
+		false;
+	$: isExpert = panel && authStore.user ? panel.expertIds?.includes(authStore.user.uid) || false : false;
+	$: canJoinAsExpert = isAdmin && !isExpert;
 
 	onMount(() => {
 		if (!authStore.isAuthenticated) {
@@ -48,10 +53,10 @@
 				return;
 			}
 
-			[experts, invitations] = await Promise.all([
-				getExpertsByPanel(panelId),
-				getInvitationsByPanel(panelId)
-			]);
+			// Load experts for this panel
+			experts = await getExpertsByPanel(panelId);
+			// TODO: Load invitations when implemented
+			// invitations = await getInvitationsByPanel(panelId);
 		} catch (error) {
 			console.error('Error loading panel data:', error);
 			goto('/panels');
@@ -61,6 +66,9 @@
 	}
 
 	async function handleInviteExperts() {
+		// TODO: Implement invitation functionality
+		alert('Invitation functionality is not yet implemented.');
+		/*
 		if (!panel || !authStore.user || !inviteEmails.trim()) return;
 
 		try {
@@ -75,6 +83,7 @@
 				return;
 			}
 
+			// TODO: Implement sendBulkInvitations
 			const result = await sendBulkInvitations(
 				emails,
 				panelId,
@@ -92,6 +101,53 @@
 			alert('Failed to send invitations. Please try again.');
 		} finally {
 			inviting = false;
+		}
+		*/
+	}
+
+	async function joinAsExpert() {
+		if (!panel || !authStore.user) return;
+		
+		try {
+			// Create expert record
+			const expertId = await createExpert({
+				panelId: panelId,
+				email: authStore.user.email || '',
+				name: authStore.user.displayName || authStore.user.email || 'Admin',
+				status: 'accepted',
+				invitedBy: authStore.user.uid,
+				userId: authStore.user.uid
+			});
+			
+			// Add to panel's expertIds
+			await addExpertToPanel(panelId, authStore.user.uid);
+			
+			toast.success('Successfully joined as expert');
+			await loadPanelData();
+		} catch (error) {
+			console.error('Error joining as expert:', error);
+			toast.error('Failed to join as expert');
+		}
+	}
+
+	async function leaveAsExpert() {
+		if (!panel || !authStore.user || !confirm('Are you sure you want to leave as an expert? You will remain an admin.')) return;
+		
+		try {
+			// Remove from panel's expertIds
+			await removeExpertFromPanel(panelId, authStore.user.uid);
+			
+			// Find and delete the expert record
+			const userExpert = experts.find(e => e.userId === authStore.user?.uid);
+			if (userExpert && userExpert.id) {
+				await deleteExpert(userExpert.id);
+			}
+			
+			toast.success('Successfully left expert role');
+			await loadPanelData();
+		} catch (error) {
+			console.error('Error leaving expert role:', error);
+			toast.error('Failed to leave expert role');
 		}
 	}
 
@@ -131,9 +187,19 @@
 						<ArrowLeft class="h-4 w-4" />
 					</Button>
 					<div>
-						<h1 class="text-3xl font-bold text-gray-900">
-							{panel?.name || 'Loading...'}
-						</h1>
+						<div class="flex items-center gap-2">
+							<h1 class="text-3xl font-bold text-gray-900">
+								{panel?.name || 'Loading...'}
+							</h1>
+							{#if panel && authStore.user}
+								{#if isAdmin}
+									<Badge variant="default">Admin</Badge>
+								{/if}
+								{#if isExpert}
+									<Badge variant="secondary">Expert</Badge>
+								{/if}
+							{/if}
+						</div>
 						{#if panel}
 							<p class="mt-1 text-sm text-gray-600">{panel.description}</p>
 						{/if}
@@ -141,9 +207,28 @@
 				</div>
 				{#if isAdmin}
 					<div class="flex items-center gap-2">
+						{#if canJoinAsExpert}
+							<Button
+								variant="secondary"
+								onclick={joinAsExpert}
+								class="flex items-center gap-2"
+							>
+								<UserCheck class="h-4 w-4" />
+								Join as Expert
+							</Button>
+						{:else if isExpert}
+							<Button
+								variant="outline"
+								onclick={leaveAsExpert}
+								class="flex items-center gap-2"
+							>
+								<UserX class="h-4 w-4" />
+								Leave Expert Role
+							</Button>
+						{/if}
 						<Button
 							variant="outline"
-							on:click={() => showInviteDialog = true}
+							onclick={() => showInviteDialog = true}
 							class="flex items-center gap-2"
 						>
 							<UserPlus class="h-4 w-4" />
@@ -182,7 +267,7 @@
 							<TableBody>
 								{#each experts as expert}
 									<TableRow>
-										<TableCell class="font-medium">{expert.displayName}</TableCell>
+										<TableCell class="font-medium">{expert.name}</TableCell>
 										<TableCell>{expert.email}</TableCell>
 										<TableCell>
 											{new Date(expert.createdAt).toLocaleDateString()}
@@ -195,8 +280,8 @@
 				</div>
 
 				<div class="rounded-lg bg-white p-6 shadow">
-					<h2 class="mb-4 text-lg font-semibold text-gray-900">Invitations ({invitations.length})</h2>
-					{#if invitations.length === 0}
+					<h2 class="mb-4 text-lg font-semibold text-gray-900">Invitations (0)</h2>
+					{#if true}
 						<p class="text-sm text-gray-500">No invitations sent yet.</p>
 					{:else}
 						<Table>
@@ -208,7 +293,7 @@
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{#each invitations as invitation}
+								{#each [] as invitation}
 									<TableRow>
 										<TableCell>{invitation.email}</TableCell>
 										<TableCell>

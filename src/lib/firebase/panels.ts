@@ -16,7 +16,17 @@ import {
 	onSnapshot,
 	type Unsubscribe
 } from 'firebase/firestore';
-import type { Panel } from './types';
+export type Panel = {
+  id?: string;
+  name: string;
+  description: string;
+  creatorId: string;
+  adminIds: string[];
+  expertIds: string[];
+  status: 'active' | 'archived';
+  createdAt: Date;
+  updatedAt: Date;
+};
 import { browser } from '$app/environment';
 
 const PANELS_COLLECTION = 'panels';

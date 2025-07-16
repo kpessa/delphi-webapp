@@ -6,7 +6,7 @@ export interface Topic {
   description: string;
   question: string;
   panelId: string;
-  creatorId: string;
+  createdBy: string;
   status: 'draft' | 'active' | 'completed';
   roundNumber: number;
   currentRoundId?: string;
@@ -48,6 +48,7 @@ export interface Panel {
   name: string;
   description: string;
   creatorId: string;
+  adminIds: string[];
   expertIds: string[];
   status: 'active' | 'archived';
   createdAt: Date;

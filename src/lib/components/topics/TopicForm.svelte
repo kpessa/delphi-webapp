@@ -4,11 +4,12 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import { extractTopicFromText } from '$lib/firebase/ai';
 	import { Wand2, Loader2, AlertCircle } from 'lucide-svelte';
-	import type { Topic, ExtractTopicResponse } from '$lib/firebase/types';
+	import type { Topic, ExtractTopicResponse, Panel } from '$lib/firebase/types';
 
 	interface Props {
 		topic?: Partial<Topic>;
@@ -16,9 +17,11 @@
 		isSubmitting?: boolean;
 		panelId: string;
 		userId: string;
+		panels?: Panel[];
+		selectedPanelId?: string;
 	}
 
-	let { topic = {}, onSubmit, isSubmitting = false, panelId, userId }: Props = $props();
+	let { topic = {}, onSubmit, isSubmitting = false, panelId, userId, panels = [], selectedPanelId = $bindable() }: Props = $props();
 
 	// Form states
 	let mode = $state<'paste' | 'manual'>('paste');
@@ -32,9 +35,9 @@
 		title: topic.title || '',
 		description: topic.description || '',
 		question: topic.question || '',
-		panelId: topic.panelId || panelId,
+		panelId: topic.panelId || selectedPanelId || '',
 		createdBy: topic.createdBy || userId,
-		status: topic.status || 'open' as const,
+		status: topic.status || 'active' as const,
 		roundNumber: topic.roundNumber || 1,
 		aiExtracted: topic.aiExtracted || false,
 		aiConfidence: topic.aiConfidence,
@@ -70,7 +73,22 @@
 
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
-		await onSubmit(formData);
+		
+		// Clean up the form data to remove undefined values
+		const cleanFormData = {
+			title: formData.title,
+			description: formData.description,
+			question: formData.question,
+			panelId: formData.panelId,
+			createdBy: formData.createdBy,
+			status: formData.status,
+			roundNumber: formData.roundNumber,
+			aiExtracted: formData.aiExtracted,
+			...(formData.aiConfidence !== undefined && { aiConfidence: formData.aiConfidence }),
+			...(formData.rawInput !== undefined && { rawInput: formData.rawInput })
+		};
+		
+		await onSubmit(cleanFormData);
 	}
 
 	function handleModeChange(value: string) {
@@ -137,6 +155,29 @@
 		</TabsContent>
 
 		<TabsContent value="manual" class="space-y-6">
+			{#if panels && panels.length > 0}
+				<div class="space-y-2">
+					<Label for="panel">Panel <span class="text-red-500">*</span></Label>
+					<select 
+						bind:value={selectedPanelId}
+						onchange={() => {
+							formData.panelId = selectedPanelId;
+						}}
+						id="panel" 
+						class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+						required
+					>
+						<option value="">Select a panel (required)</option>
+						{#each panels as panel}
+							<option value={panel.id}>{panel.name}</option>
+						{/each}
+					</select>
+					<p class="text-sm text-muted-foreground">
+						Select which panel of experts will provide feedback on this topic. This field is required.
+					</p>
+				</div>
+			{/if}
+
 			{#if extractedData && mode === 'manual' && formData.aiExtracted}
 				<Alert>
 					<Wand2 class="h-4 w-4" />
@@ -214,7 +255,7 @@
 		</Button>
 		<Button 
 			type="submit" 
-			disabled={isSubmitting || !formData.title || !formData.description || !formData.question}
+			disabled={isSubmitting || !formData.title || !formData.description || !formData.question || !selectedPanelId}
 		>
 			{isSubmitting ? 'Creating...' : topic?.id ? 'Update Topic' : 'Create Topic'}
 		</Button>
