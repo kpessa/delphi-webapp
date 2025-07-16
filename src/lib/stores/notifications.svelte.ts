@@ -41,8 +41,13 @@ class NotificationsStore {
     this.error = null;
 
     try {
-      // Load user preferences
-      this.preferences = await getPreferences(user.uid);
+      // Load user preferences (don't fail if missing)
+      try {
+        this.preferences = await getPreferences(user.uid);
+      } catch (error) {
+        console.log('No notification preferences found for user, using defaults');
+        this.preferences = null;
+      }
       
       // Load initial notifications
       const initialNotifications = await getNotifications(user.uid, 20);
@@ -59,7 +64,7 @@ class NotificationsStore {
           );
           
           // Show toast for new notifications with preferences
-          newNotifications.forEach(n => showNotificationToast(n, this.preferences));
+          newNotifications.forEach(n => showNotificationToast(n, this.preferences || undefined));
           
           this.notifications = notifications;
         }
@@ -73,7 +78,10 @@ class NotificationsStore {
       );
     } catch (error) {
       console.error('Error initializing notifications:', error);
-      this.error = 'Failed to load notifications';
+      // Don't show error to user for permission issues - this is expected for new users
+      this.error = null;
+      this.notifications = [];
+      this.unreadCount = 0;
     } finally {
       this.loading = false;
     }

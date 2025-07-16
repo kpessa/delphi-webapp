@@ -87,7 +87,8 @@ export async function getNotifications(
     } as Notification));
   } catch (error) {
     console.error('Error getting notifications:', error);
-    throw error;
+    // Return empty array instead of throwing for permission issues
+    return [];
   }
 }
 
@@ -267,13 +268,19 @@ export function subscribeToNotifications(
   
   const q = query(notificationsRef, ...constraints);
 
-  return onSnapshot(q, snapshot => {
-    const notifications = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Notification));
-    callback(notifications);
-  });
+  return onSnapshot(q, 
+    snapshot => {
+      const notifications = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Notification));
+      callback(notifications);
+    },
+    error => {
+      console.error('Error in notifications subscription:', error);
+      callback([]);
+    }
+  );
 }
 
 // Real-time listener for unread count
@@ -289,9 +296,15 @@ export function subscribeToUnreadCount(
     where('archived', '!=', true)
   );
 
-  return onSnapshot(q, snapshot => {
-    callback(snapshot.size);
-  });
+  return onSnapshot(q, 
+    snapshot => {
+      callback(snapshot.size);
+    },
+    error => {
+      console.error('Error in unread count subscription:', error);
+      callback(0);
+    }
+  );
 }
 
 // Batch create notifications for multiple users
