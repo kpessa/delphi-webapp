@@ -1,17 +1,20 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
-  import { doc, getDoc, onSnapshot, collection, query, where, orderBy } from 'firebase/firestore';
+  import { onMount, onDestroy } from 'svelte';
+  import { doc, getDoc, onSnapshot } from 'firebase/firestore';
   import { db } from '$lib/firebase/config';
   import { authStore } from '$lib/stores/auth.svelte';
-  import type { Topic, Panel, Feedback, Round } from '$lib/firebase/types';
+  import { subscribeTopic } from "$lib/firebase/topics";
+  import type { Topic, Panel, Round } from '$lib/firebase/types';
+  import type { Unsubscribe } from "firebase/firestore";
   import { Button } from '$lib/components/ui/button';
-  import { Card } from '$lib/components/ui/card';
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
   import { Badge } from '$lib/components/ui/badge';
   import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
   import { Skeleton } from '$lib/components/ui/skeleton';
-  import { ArrowLeft, MessageSquare, Users, TrendingUp } from 'lucide-svelte';
+  import { Alert, AlertDescription, AlertTitle } from "$lib/components/ui/alert";
+  import { ArrowLeft, MessageSquare, Users, TrendingUp, AlertCircle, Loader2 } from 'lucide-svelte';
   
   // Import round components
   import RoundIndicator from '$lib/components/rounds/RoundIndicator.svelte';
@@ -23,6 +26,9 @@
   // Import round feedback components
   import RoundFeedbackForm from '$lib/components/feedback/RoundFeedbackForm.svelte';
   import RoundFeedbackList from '$lib/components/feedback/RoundFeedbackList.svelte';
+  
+  // Import main's feedback component
+  import FeedbackList from "$lib/components/feedback/FeedbackList.svelte";
 
   let topic: Topic | null = $state(null);
   let panel: Panel | null = $state(null);
@@ -34,8 +40,11 @@
   let isAdmin = $state(false);
   let isExpert = $state(false);
   let activeTab = $state('discussion');
+  let unsubscribe: Unsubscribe | null = null;
+  let showRoundsView = $state(true); // Toggle between rounds and simple feedback
 
   const topicId = $page.params.id;
+  const isDisabled = $derived(topic?.status === 'completed' || !authStore.isAuthenticated);
 
   onMount(() => {
     if (!topicId) {
@@ -43,64 +52,47 @@
       return;
     }
 
-    loadTopic();
-    
-    // Set up real-time listener for topic updates
-    const unsubscribe = onSnapshot(
-      doc(db, 'topics', topicId),
-      (doc) => {
-        if (doc.exists()) {
-          topic = { id: doc.id, ...doc.data() } as Topic;
-          checkUserRole();
-          loadCurrentRound();
-        }
-      },
-      (err) => {
-        console.error('Error listening to topic:', err);
-        error = 'Failed to load topic updates';
+    // Use main's subscribeTopic for real-time updates
+    unsubscribe = subscribeTopic(topicId, (topicData) => {
+      topic = topicData;
+      loading = false;
+      
+      if (!topicData) {
+        error = "Topic not found";
+      } else {
+        error = null;
+        checkUserRole();
+        loadAdditionalData();
       }
-    );
-
-    return unsubscribe;
+    });
   });
 
-  async function loadTopic() {
-    try {
-      loading = true;
-      
-      // Load topic
-      const topicDoc = await getDoc(doc(db, 'topics', topicId));
-      if (!topicDoc.exists()) {
-        error = 'Topic not found';
-        return;
+  onDestroy(() => {
+    unsubscribe?.();
+  });
+
+  async function loadAdditionalData() {
+    if (!topic) return;
+    
+    // Load panel
+    if (topic.panelId) {
+      const panelDoc = await getDoc(doc(db, 'panels', topic.panelId));
+      if (panelDoc.exists()) {
+        panel = { id: panelDoc.id, ...panelDoc.data() } as Panel;
       }
-      
-      topic = { id: topicDoc.id, ...topicDoc.data() } as Topic;
-      
-      // Load panel
-      if (topic.panelId) {
-        const panelDoc = await getDoc(doc(db, 'panels', topic.panelId));
-        if (panelDoc.exists()) {
-          panel = { id: panelDoc.id, ...panelDoc.data() } as Panel;
-        }
-      }
-      
-      await checkUserRole();
+    }
+    
+    // Load round data if rounds are enabled
+    if (showRoundsView) {
       await loadCurrentRound();
-      
-    } catch (err) {
-      console.error('Error loading topic:', err);
-      error = 'Failed to load topic';
-    } finally {
-      loading = false;
     }
   }
 
   async function checkUserRole() {
     if (!authStore.user || !topic || !panel) return;
     
-    isAdmin = panel.adminIds.includes(authStore.user.uid) || topic.createdBy === authStore.user.uid;
-    isExpert = panel.expertIds.includes(authStore.user.uid);
+    isAdmin = panel.adminIds?.includes(authStore.user.uid) || topic.creatorId === authStore.user.uid;
+    isExpert = panel.expertIds?.includes(authStore.user.uid);
   }
 
   async function loadCurrentRound() {
@@ -131,8 +123,8 @@
     }
   }
 
-  let canProvideFeedback = $derived(isExpert && topic?.status === 'open' && currentRound?.status === 'active');
-  let showWaitingState = $derived(topic?.status === 'open' && !currentRound);
+  let canProvideFeedback = $derived(isExpert && topic?.status === 'active' && currentRound?.status === 'active');
+  let showWaitingState = $derived(topic?.status === 'active' && !currentRound && showRoundsView);
 </script>
 
 <svelte:head>
@@ -141,22 +133,17 @@
 
 <div class="container mx-auto py-8 px-4 max-w-7xl">
   {#if loading}
-    <div class="space-y-4">
-      <Skeleton class="h-8 w-64" />
-      <Skeleton class="h-32 w-full" />
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2">
-          <Skeleton class="h-96 w-full" />
-        </div>
-        <div>
-          <Skeleton class="h-96 w-full" />
-        </div>
-      </div>
+    <div class="flex items-center justify-center py-16">
+      <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
     </div>
   {:else if error}
     <Card class="p-8 text-center">
-      <p class="text-destructive mb-4">{error}</p>
-      <Button href="/topics" variant="outline">
+      <Alert variant="destructive">
+        <AlertCircle class="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+      <Button href="/topics" variant="outline" class="mt-4">
         <ArrowLeft class="h-4 w-4 mr-2" />
         Back to Topics
       </Button>
@@ -175,7 +162,7 @@
           <p class="text-muted-foreground mb-4">{topic.description}</p>
           
           <div class="flex items-center gap-4 text-sm">
-            <Badge variant={topic.status === 'open' ? 'default' : 'secondary'}>
+            <Badge variant={topic.status === 'active' ? 'default' : 'secondary'}>
               {topic.status}
             </Badge>
             {#if panel}
@@ -187,104 +174,157 @@
             {#if topic.aiExtracted}
               <Badge variant="outline">AI Extracted</Badge>
             {/if}
+            {#if isAdmin}
+              <Button
+                variant="outline"
+                size="sm"
+                onclick={() => showRoundsView = !showRoundsView}
+              >
+                {showRoundsView ? 'Simple View' : 'Rounds View'}
+              </Button>
+            {/if}
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Round Indicator -->
-    <div class="mb-6">
-      <RoundIndicator {topic} {consensusMetrics} />
-    </div>
+    {#if !authStore.isAuthenticated}
+      <Alert class="mb-6">
+        <AlertCircle class="h-4 w-4" />
+        <AlertTitle>Authentication Required</AlertTitle>
+        <AlertDescription>
+          Please <a href="/auth/login" class="underline">sign in</a> to participate in the discussion.
+        </AlertDescription>
+      </Alert>
+    {/if}
 
-    <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left Column - Discussion/Summary -->
-      <div class="lg:col-span-2 space-y-6">
-        {#if showWaitingState}
-          <Card class="p-8 text-center">
-            <TrendingUp class="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 class="text-lg font-semibold mb-2">Waiting for First Round</h3>
-            <p class="text-muted-foreground">
-              The administrator will start the first round of feedback collection soon.
-            </p>
-          </Card>
-        {:else}
-          <Card>
-            <Tabs bind:value={activeTab}>
-              <TabsList class="grid w-full grid-cols-2">
-                <TabsTrigger value="discussion" disabled={!canProvideFeedback && selectedRound?.status === 'completed'}>
-                  <MessageSquare class="h-4 w-4 mr-2" />
-                  Discussion
-                </TabsTrigger>
-                <TabsTrigger value="summary" disabled={!selectedRound}>
-                  <TrendingUp class="h-4 w-4 mr-2" />
-                  Summary
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="discussion" class="p-6">
-                <div class="space-y-6">
-                  <div class="bg-muted/50 rounded-lg p-4">
-                    <h3 class="font-semibold mb-2">Question for Round {selectedRound?.roundNumber || topic.roundNumber}</h3>
-                    <p class="text-lg">{topic.question}</p>
-                  </div>
-                  
-                  {#if canProvideFeedback && selectedRound?.status === 'active'}
-                    <RoundFeedbackForm 
-                      topicId={topic.id!} 
-                      roundNumber={selectedRound.roundNumber}
-                    />
-                  {:else if selectedRound?.status === 'completed'}
-                    <div class="text-center py-8 text-muted-foreground">
-                      <p>This round has been closed. View the summary to see results.</p>
-                    </div>
-                  {:else if !isExpert}
-                    <div class="text-center py-8 text-muted-foreground">
-                      <p>Only panel experts can provide feedback.</p>
-                    </div>
-                  {/if}
-                  
-                  {#if selectedRound}
-                    <RoundFeedbackList 
-                      topicId={topic.id!} 
-                      roundNumber={selectedRound.roundNumber}
-                      canVote={canProvideFeedback}
-                    />
-                  {/if}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="summary" class="p-6">
-                {#if selectedRound}
-                  <RoundSummary round={selectedRound} topicId={topic.id!} />
-                {:else}
-                  <p class="text-center text-muted-foreground py-8">
-                    No round selected
-                  </p>
-                {/if}
-              </TabsContent>
-            </Tabs>
-          </Card>
-        {/if}
-        
-        <!-- Admin Controls -->
-        {#if isAdmin}
-          <RoundControls 
-            {topic} 
-            {isAdmin} 
-            onRoundChange={handleRoundChange}
-          />
-        {/if}
+    {#if topic.status === 'completed'}
+      <Alert class="mb-6">
+        <AlertCircle class="h-4 w-4" />
+        <AlertTitle>Topic Completed</AlertTitle>
+        <AlertDescription>
+          This topic has been completed and is no longer accepting feedback.
+        </AlertDescription>
+      </Alert>
+    {/if}
+
+    {#if showRoundsView}
+      <!-- Rounds View -->
+      <!-- Round Indicator -->
+      <div class="mb-6">
+        <RoundIndicator {topic} {consensusMetrics} />
       </div>
-      
-      <!-- Right Column - Timeline -->
-      <div>
-        <RoundTimeline 
-          {topic} 
-          onRoundSelect={handleRoundSelect}
+
+      <!-- Main Content Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column - Discussion/Summary -->
+        <div class="lg:col-span-2 space-y-6">
+          {#if showWaitingState}
+            <Card class="p-8 text-center">
+              <TrendingUp class="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 class="text-lg font-semibold mb-2">Waiting for First Round</h3>
+              <p class="text-muted-foreground">
+                The administrator will start the first round of feedback collection soon.
+              </p>
+            </Card>
+          {:else}
+            <Card>
+              <Tabs bind:value={activeTab}>
+                <TabsList class="grid w-full grid-cols-2">
+                  <TabsTrigger value="discussion" disabled={!canProvideFeedback && selectedRound?.status === 'completed'}>
+                    <MessageSquare class="h-4 w-4 mr-2" />
+                    Discussion
+                  </TabsTrigger>
+                  <TabsTrigger value="summary" disabled={!selectedRound}>
+                    <TrendingUp class="h-4 w-4 mr-2" />
+                    Summary
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="discussion" class="p-6">
+                  <div class="space-y-6">
+                    <div class="bg-muted/50 rounded-lg p-4">
+                      <h3 class="font-semibold mb-2">Question for Round {selectedRound?.roundNumber || topic.roundNumber}</h3>
+                      <p class="text-lg">{topic.question}</p>
+                    </div>
+                    
+                    {#if canProvideFeedback && selectedRound?.status === 'active'}
+                      <RoundFeedbackForm 
+                        topicId={topic.id!} 
+                        roundNumber={selectedRound.roundNumber}
+                      />
+                    {:else if selectedRound?.status === 'completed'}
+                      <div class="text-center py-8 text-muted-foreground">
+                        <p>This round has been closed. View the summary to see results.</p>
+                      </div>
+                    {:else if !isExpert}
+                      <div class="text-center py-8 text-muted-foreground">
+                        <p>Only panel experts can provide feedback.</p>
+                      </div>
+                    {/if}
+                    
+                    {#if selectedRound}
+                      <RoundFeedbackList 
+                        topicId={topic.id!} 
+                        roundNumber={selectedRound.roundNumber}
+                        canVote={canProvideFeedback}
+                      />
+                    {/if}
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="summary" class="p-6">
+                  {#if selectedRound}
+                    <RoundSummary round={selectedRound} topicId={topic.id!} />
+                  {:else}
+                    <p class="text-center text-muted-foreground py-8">
+                      No round selected
+                    </p>
+                  {/if}
+                </TabsContent>
+              </Tabs>
+            </Card>
+          {/if}
+          
+          <!-- Admin Controls -->
+          {#if isAdmin}
+            <RoundControls 
+              {topic} 
+              {isAdmin} 
+              onRoundChange={handleRoundChange}
+            />
+          {/if}
+        </div>
+        
+        <!-- Right Column - Timeline -->
+        <div>
+          <RoundTimeline 
+            {topic} 
+            onRoundSelect={handleRoundSelect}
+          />
+        </div>
+      </div>
+    {:else}
+      <!-- Simple Feedback View (from main branch) -->
+      <div class="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Discussion Question</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="bg-muted p-4 rounded-lg">
+              <p class="text-lg">{topic.question}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <FeedbackList 
+          topicId={topic.id!}
+          panelId={topic.panelId}
+          roundNumber={topic.roundNumber}
+          disabled={isDisabled}
         />
       </div>
-    </div>
+    {/if}
   {/if}
 </div>

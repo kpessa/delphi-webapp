@@ -36,7 +36,7 @@
 </script>
 
 <svelte:head>
-	<title>Dashboard - Delphi Healthcare Platform</title>
+	<title>Dashboard - Delphi Platform</title>
 </svelte:head>
 
 <div class="container mx-auto px-4 py-8">
@@ -73,11 +73,11 @@
 				<div class="rounded-lg bg-card p-6 shadow-sm border">
 					<h3 class="text-lg font-medium">Quick Actions</h3>
 					<div class="mt-4 space-y-2">
-						<Button href="/panels/create" variant="outline" class="w-full justify-start">
-							Create New Panel
+						<Button href="/topics" variant="outline" class="w-full justify-start">
+							View All Topics
 						</Button>
-						<Button href="/items/new" class="w-full justify-start">
-							Create New Item
+						<Button href="/topics/new" class="w-full justify-start">
+							Create New Topic
 						</Button>
 					</div>
 				</div>
@@ -85,10 +85,10 @@
 				<div class="rounded-lg bg-primary/5 p-6 border border-primary/10">
 					<h3 class="text-lg font-medium">Next Steps</h3>
 					<ul class="mt-2 list-inside list-disc space-y-1 text-muted-foreground">
-						<li>Create expert panels for feedback collection</li>
-						<li>Invite facility leaders and subject matter experts</li>
-						<li>Configure voting rounds and questions</li>
-						<li>Monitor real-time feedback from participants</li>
+						<li>Create topics from meeting notes or email threads using AI</li>
+						<li>Invite experts to join discussion panels</li>
+						<li>Collect feedback through multiple rounds</li>
+						<li>Monitor consensus building in real-time</li>
 					</ul>
 				</div>
 			</div>
