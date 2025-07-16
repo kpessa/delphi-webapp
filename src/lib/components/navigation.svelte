@@ -50,6 +50,12 @@
 					>
 						Topics
 					</a>
+					<a
+						href="/panels"
+						class="transition-colors hover:text-foreground/80 text-foreground/60"
+					>
+						Panels
+					</a>
 				</nav>
 			{/if}
 		</div>
