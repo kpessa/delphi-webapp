@@ -11,7 +11,7 @@
 	import { createExpert } from '$lib/firebase/experts';
 	import { addExpertToPanel } from '$lib/firebase/panels';
 	import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-	import { auth } from '$lib/firebase/app';
+	import { auth } from '$lib/firebase/config';
 	import { toast } from 'svelte-sonner';
 	import { CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-svelte';
 	import type { PanelInvitation } from '$lib/firebase/types';
