@@ -175,5 +175,57 @@ service cloud.firestore {
       allow update: if isOwner(userId);
       allow delete: if false; // Users should not be deleted
     }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Only allow creation through Cloud Functions or by the system
+      // Users should not directly create notifications
+      allow create: if false;
+      
+      // Users can only update their own notifications (to mark as read)
+      allow update: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid &&
+        // Only allow updating 'read' field and 'updatedAt'
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'updatedAt']) &&
+        // Validate the read field is boolean
+        request.resource.data.read is bool;
+      
+      // Users cannot delete notifications
+      allow delete: if false;
+    }
+    
+    // Notification preferences collection
+    match /notificationPreferences/{userId} {
+      // Users can only read their own preferences
+      allow read: if isOwner(userId);
+      
+      // Users can create their own preferences
+      allow create: if isOwner(userId) &&
+        // Validate required fields
+        request.resource.data.keys().hasAll(['userId', 'email', 'emailFrequency', 'topicAssigned', 'newFeedback', 'roundClosed', 'consensusReached']) &&
+        // Validate field types
+        request.resource.data.email is bool &&
+        request.resource.data.emailFrequency in ['immediate', 'daily', 'weekly'] &&
+        request.resource.data.topicAssigned is bool &&
+        request.resource.data.newFeedback is bool &&
+        request.resource.data.roundClosed is bool &&
+        request.resource.data.consensusReached is bool;
+      
+      // Users can update their own preferences
+      allow update: if isOwner(userId) &&
+        // Validate field types if they're being updated
+        (!request.resource.data.keys().hasAny(['email']) || request.resource.data.email is bool) &&
+        (!request.resource.data.keys().hasAny(['emailFrequency']) || request.resource.data.emailFrequency in ['immediate', 'daily', 'weekly']) &&
+        (!request.resource.data.keys().hasAny(['topicAssigned']) || request.resource.data.topicAssigned is bool) &&
+        (!request.resource.data.keys().hasAny(['newFeedback']) || request.resource.data.newFeedback is bool) &&
+        (!request.resource.data.keys().hasAny(['roundClosed']) || request.resource.data.roundClosed is bool) &&
+        (!request.resource.data.keys().hasAny(['consensusReached']) || request.resource.data.consensusReached is bool);
+      
+      // Users cannot delete their preferences
+      allow delete: if false;
+    }
   }
 }

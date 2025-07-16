@@ -118,3 +118,54 @@ export interface ExtractTopicResponse {
   suggestedFeedbackTypes: FeedbackType[];
   confidence: number;
 }
+
+// Legacy types for migration reference
+export type ItemType = 'initiative' | 'assessment' | 'consultation' | 'evaluation' | 'survey' | 'custom';
+export type ItemCategory = 'clinical' | 'operational' | 'financial' | 'strategic' | 'quality' | 'technology';
+export type ItemScope = 'system-wide' | 'regional' | 'facility' | 'department';
+
+export interface Item {
+  id?: string;
+  type: ItemType;
+  category?: ItemCategory;
+  scope?: ItemScope;
+  title: string;
+  description: string;
+  adminIds: string[];
+  expertIds: string[];
+  consensusThreshold: number;
+  maxRounds: number;
+  currentRound: number;
+  status: 'draft' | 'active' | 'completed';
+  customMetadata?: Record<string, any>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Notification Types
+export type NotificationType = 'topic_assigned' | 'new_feedback' | 'round_closed' | 'consensus_reached' | 'invitation';
+
+export interface Notification {
+  id?: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  data?: Record<string, any>; // Links to topic, panel, etc.
+  read: boolean;
+  archived?: boolean;
+  createdAt: Date;
+}
+
+export interface NotificationPreferences {
+  userId: string;
+  email: boolean;
+  emailFrequency: 'immediate' | 'daily' | 'weekly';
+  topicAssigned: boolean;
+  newFeedback: boolean;
+  roundClosed: boolean;
+  consensusReached: boolean;
+  soundEnabled?: boolean;
+  soundVolume?: number; // 0-100
+  browserNotifications?: boolean;
+}
