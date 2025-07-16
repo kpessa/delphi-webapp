@@ -47,33 +47,29 @@
 	<title>Panels - Delphi Healthcare Platform</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-50">
-	<header class="bg-white shadow">
-		<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-			<div class="flex items-center justify-between">
-				<div>
-					<h1 class="text-3xl font-bold text-gray-900">Expert Panels</h1>
-					<p class="mt-1 text-sm text-gray-600">
-						Manage groups of experts for anonymous feedback collection
-					</p>
-				</div>
-				<Button href="/panels/create" class="flex items-center gap-2">
-					<Plus class="h-4 w-4" />
-					Create Panel
-				</Button>
-			</div>
+<div class="py-8">
+	<div class="flex items-center justify-between mb-6">
+		<div>
+			<h1 class="text-3xl font-bold">Expert Panels</h1>
+			<p class="mt-1 text-sm text-muted-foreground">
+				Manage groups of experts for anonymous feedback collection
+			</p>
 		</div>
-	</header>
+		<Button href="/panels/create" class="flex items-center gap-2">
+			<Plus class="h-4 w-4" />
+			Create Panel
+		</Button>
+	</div>
 
-	<main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+	<div>
 		{#if loading}
 			<div class="flex items-center justify-center py-12">
 				<p class="text-gray-500">Loading panels...</p>
 			</div>
 		{:else if panels.length === 0}
-			<div class="rounded-lg bg-white p-8 text-center shadow">
-				<h3 class="text-lg font-medium text-gray-900">No panels yet</h3>
-				<p class="mt-2 text-sm text-gray-500">
+			<div class="rounded-lg bg-card p-8 text-center shadow-sm border">
+				<h3 class="text-lg font-medium">No panels yet</h3>
+				<p class="mt-2 text-sm text-muted-foreground">
 					Get started by creating your first expert panel.
 				</p>
 				<Button href="/panels/create" class="mt-4">
@@ -81,7 +77,7 @@
 				</Button>
 			</div>
 		{:else}
-			<div class="rounded-lg bg-white shadow">
+			<div class="rounded-lg bg-card shadow-sm border">
 				<Table>
 					<TableCaption>Expert panels for Delphi technique feedback</TableCaption>
 					<TableHeader>
@@ -145,5 +141,5 @@
 				</Table>
 			</div>
 		{/if}
-	</main>
+	</div>
 </div>
