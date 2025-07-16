@@ -18,6 +18,6 @@
 	});
 </script>
 
-<div class="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+<div class="flex min-h-screen items-center justify-center bg-background px-4 py-6 sm:py-12">
 	<slot />
 </div>

@@ -138,7 +138,7 @@
   <title>{topic?.title || 'Topic'} - Delphi Platform</title>
 </svelte:head>
 
-<div class="container mx-auto py-8 px-4 max-w-7xl">
+<div class="py-6 md:py-8">
   {#if loading}
     <div class="flex items-center justify-center py-16">
       <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
@@ -165,8 +165,8 @@
       
       <div class="flex items-start justify-between gap-4">
         <div class="flex-1">
-          <h1 class="text-3xl font-bold mb-2">{topic.title}</h1>
-          <p class="text-muted-foreground mb-4">{topic.description}</p>
+          <h1 class="text-2xl md:text-3xl font-bold mb-2">{topic.title}</h1>
+          <p class="text-sm md:text-base text-muted-foreground mb-3 md:mb-4">{topic.description}</p>
           
           <div class="flex items-center gap-4 text-sm">
             <Badge variant={topic.status === 'active' ? 'default' : 'secondary'}>
@@ -223,7 +223,7 @@
       </div>
 
       <!-- Main Content Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <!-- Left Column - Discussion/Summary -->
         <div class="lg:col-span-2 space-y-6">
           {#if showWaitingState}
