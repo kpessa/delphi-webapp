@@ -172,87 +172,58 @@ export const extractTopic = functions.https.onRequest(async (req, res) => {
       }
 
       const idToken = authHeader.split('Bearer ')[1];
+      let decodedToken;
       try {
-        await admin.auth().verifyIdToken(idToken);
+        decodedToken = await admin.auth().verifyIdToken(idToken);
       } catch (error) {
         res.status(401).json({ error: 'Invalid token' });
         return;
       }
 
-      // Check if OpenAI is available
+      const { rawText, panelContext } = req.body as ExtractTopicRequest;
+      
+      if (!rawText || !rawText.trim()) {
+        res.status(400).json({ error: 'Raw text is required' });
+        return;
+      }
+
       if (!openai) {
-        res.status(503).json({ error: 'OpenAI service not configured' });
+        res.status(500).json({ error: 'OpenAI not configured' });
         return;
       }
 
-      // Get request data
-      const { rawText, panelContext }: ExtractTopicRequest = req.body;
-
-      if (!rawText || typeof rawText !== 'string') {
-        res.status(400).json({ error: 'Missing or invalid rawText' });
-        return;
-      }
-
-      // Create the prompt for OpenAI
-      const systemPrompt = `You are an expert at extracting structured information from unstructured text to create topics for group discussion using the Delphi method.
-
-The Delphi method is a structured communication technique for gathering expert opinions anonymously over multiple rounds to reach consensus.
-
-Your task is to extract:
-1. A clear, concise title (max 100 chars)
-2. A detailed description providing context (max 500 chars)
-3. A specific, actionable question that experts can provide feedback on
-4. Suggested feedback types that would be most helpful
-
-Context about the panel (if provided): ${panelContext || 'General purpose panel'}`;
-
-      const userPrompt = `Extract a topic for Delphi method discussion from the following text:
-
-${rawText}
-
-Respond in JSON format with this structure:
-{
-  "title": "string",
-  "description": "string",
-  "question": "string",
-  "suggestedFeedbackTypes": ["idea", "solution", "concern"],
-  "confidence": 0.0-1.0
-}`;
-
-      // Call OpenAI
-      const completion = await openai!.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        response_format: { type: 'json_object' },
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'system',
+          content: `You are a healthcare expert skilled at extracting key topics from discussions. 
+          
+          Given raw text (from emails, meeting notes, etc), extract:
+          - title: A clear, concise title for the topic
+          - description: A brief description of the issue/decision needed
+          - question: The main question that needs expert input
+          - suggestedFeedbackTypes: Array of relevant feedback types from: comment, rating, ranking, poll, comparison
+          - confidence: Your confidence level (0-100) that this is a valid topic
+          
+          Context: ${panelContext || 'Healthcare decision-making panel'}
+          
+          Return valid JSON only.`
+        }, {
+          role: 'user',
+          content: rawText
+        }],
         temperature: 0.3,
-        max_tokens: 1000,
+        max_tokens: 500
       });
 
-      const result = JSON.parse(completion.choices[0].message.content || '{}');
-
-      // Validate and ensure feedback types are valid
-      const validFeedbackTypes: FeedbackType[] = ['idea', 'solution', 'concern', 'vote', 'refinement'];
-      result.suggestedFeedbackTypes = result.suggestedFeedbackTypes.filter(
-        (type: string) => validFeedbackTypes.includes(type as FeedbackType)
-      );
-
-      // If no valid types, default to common ones
-      if (result.suggestedFeedbackTypes.length === 0) {
-        result.suggestedFeedbackTypes = ['idea', 'solution', 'concern'];
+      const result = completion.choices[0].message.content;
+      if (!result) {
+        res.status(500).json({ error: 'Failed to extract topic' });
+        return;
       }
 
-      const response: ExtractTopicResponse = {
-        title: result.title || 'Untitled Topic',
-        description: result.description || '',
-        question: result.question || 'What are your thoughts on this topic?',
-        suggestedFeedbackTypes: result.suggestedFeedbackTypes,
-        confidence: result.confidence || 0.7,
-      };
-
-      res.status(200).json(response);
+      const extractedTopic = JSON.parse(result) as ExtractTopicResponse;
+      res.status(200).json(extractedTopic);
     } catch (error) {
       console.error('Error extracting topic:', error);
       res.status(500).json({ error: 'Failed to extract topic' });
@@ -260,56 +231,60 @@ Respond in JSON format with this structure:
   });
 });
 
-// Function to generate round summaries
 export const generateRoundSummary = functions.https.onRequest(async (req, res) => {
   corsHandler(req, res, async () => {
     try {
-      // Similar auth check...
+      // Verify authentication
       const authHeader = req.headers.authorization;
       if (!authHeader?.startsWith('Bearer ')) {
         res.status(401).json({ error: 'Unauthorized' });
         return;
       }
 
-      // Check if OpenAI is available
+      const idToken = authHeader.split('Bearer ')[1];
+      let decodedToken;
+      try {
+        decodedToken = await admin.auth().verifyIdToken(idToken);
+      } catch (error) {
+        res.status(401).json({ error: 'Invalid token' });
+        return;
+      }
+
+      const { feedback, roundNumber, topicTitle } = req.body;
+
+      if (!feedback || !Array.isArray(feedback)) {
+        res.status(400).json({ error: 'Feedback array is required' });
+        return;
+      }
+
       if (!openai) {
-        res.status(503).json({ error: 'OpenAI service not configured' });
+        res.status(500).json({ error: 'OpenAI not configured' });
         return;
       }
 
-      const { topicId, roundNumber } = req.body;
-
-      // Fetch feedback from Firestore
-      const feedbackSnapshot = await admin.firestore()
-        .collection('feedback')
-        .where('topicId', '==', topicId)
-        .where('roundNumber', '==', roundNumber)
-        .get();
-
-      const feedback = feedbackSnapshot.docs.map(doc => doc.data());
-
-      if (feedback.length === 0) {
-        res.status(200).json({ summary: 'No feedback provided in this round.' });
-        return;
-      }
-
-      // Create summary prompt
       const feedbackText = feedback.map(f => `${f.type}: ${f.content}`).join('\n');
-      
-      const completion = await openai!.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: 'Summarize the key themes, agreements, and disagreements from this Delphi method round feedback.'
-          },
-          {
-            role: 'user',
-            content: feedbackText
-          }
-        ],
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{
+          role: 'system',
+          content: `You are a healthcare expert analyzing anonymous feedback from a Delphi panel.
+          
+          Create a summary of Round ${roundNumber} feedback for: ${topicTitle}
+          
+          Focus on:
+          - Key themes and patterns
+          - Areas of consensus and disagreement
+          - Quantitative insights from ratings/rankings
+          - Recommendations for next steps
+          
+          Keep it concise and actionable for healthcare decision-makers.`
+        }, {
+          role: 'user',
+          content: feedbackText
+        }],
         temperature: 0.3,
-        max_tokens: 500,
+        max_tokens: 800
       });
 
       res.status(200).json({ 
@@ -322,7 +297,6 @@ export const generateRoundSummary = functions.https.onRequest(async (req, res) =
   });
 });
 
-<<<<<<< HEAD
 // Function to send invitation emails (v1)
 export const sendInvitationEmail = functions.https.onCall(async (data: any, context: any) => {
   console.log('sendInvitationEmail called with data:', data);
@@ -466,7 +440,7 @@ export const sendInvitationEmail = functions.https.onCall(async (data: any, cont
     throw new functions.https.HttpsError('internal', error.message || 'Failed to send invitation email');
   }
 });
-=======
+
 // Email notification function (using SendGrid or similar)
 export const sendEmailNotification = functions.firestore
   .document('notifications/{notificationId}')
@@ -639,7 +613,7 @@ async function sendDigestEmail(userId: string, notifications: any[], frequency: 
 
 // Helper function to generate email content
 function getEmailContent(notification: Notification) {
-  const baseUrl = process.env.APP_URL || 'https://delphi-platform.com';
+  const baseUrl = config.app?.url || 'https://delphi-platform.com';
   
   const templates = {
     topic_assigned: {
@@ -726,7 +700,7 @@ function getEmailContent(notification: Notification) {
 
 // Helper function to generate digest email content
 function getDigestEmailContent(notifications: any[], frequency: 'daily' | 'weekly') {
-  const baseUrl = process.env.APP_URL || 'https://delphi-platform.com';
+  const baseUrl = config.app?.url || 'https://delphi-platform.com';
   const period = frequency === 'daily' ? 'Daily' : 'Weekly';
   
   const notificationsList = notifications
@@ -903,4 +877,3 @@ export const onRoundClosed = functions.firestore
       await batch.commit();
     }
   });
->>>>>>> origin/main
