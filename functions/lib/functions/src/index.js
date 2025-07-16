@@ -36,10 +36,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateRoundSummary = exports.extractTopic = void 0;
+exports.sendInvitationEmail = exports.generateRoundSummary = exports.extractTopic = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const openai_1 = __importDefault(require("openai"));
+const mail_1 = __importDefault(require("@sendgrid/mail"));
 const cors_1 = __importDefault(require("cors"));
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -47,6 +48,10 @@ admin.initializeApp();
 const openai = process.env.OPENAI_API_KEY ? new openai_1.default({
     apiKey: process.env.OPENAI_API_KEY,
 }) : null;
+// Initialize SendGrid
+if (process.env.SENDGRID_API_KEY) {
+    mail_1.default.setApiKey(process.env.SENDGRID_API_KEY);
+}
 // Enable CORS
 const corsHandler = (0, cors_1.default)({ origin: true });
 exports.extractTopic = functions.https.onRequest(async (req, res) => {
@@ -188,5 +193,138 @@ exports.generateRoundSummary = functions.https.onRequest(async (req, res) => {
             res.status(500).json({ error: 'Failed to generate summary' });
         }
     });
+});
+// Function to send invitation emails (v1)
+exports.sendInvitationEmail = functions.https.onCall(async (data, context) => {
+    var _a, _b;
+    console.log('sendInvitationEmail called with data:', data);
+    console.log('Auth context:', (_a = context.auth) === null || _a === void 0 ? void 0 : _a.uid);
+    // Verify authentication
+    if (!context || !context.auth) {
+        console.error('No authentication context');
+        throw new functions.https.HttpsError('unauthenticated', 'Must be authenticated to send invitations');
+    }
+    // Check if SendGrid is configured
+    if (!process.env.SENDGRID_API_KEY) {
+        console.error('SendGrid API key not found in environment');
+        throw new functions.https.HttpsError('failed-precondition', 'SendGrid is not configured');
+    }
+    const { invitationId } = data;
+    if (!invitationId) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invitation ID is required');
+    }
+    try {
+        // Get invitation from Firestore
+        const invitationDoc = await admin.firestore()
+            .collection('panelInvitations')
+            .doc(invitationId)
+            .get();
+        if (!invitationDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Invitation not found');
+        }
+        const invitation = invitationDoc.data();
+        // Check if invitation is still pending
+        if (invitation.status !== 'pending') {
+            throw new functions.https.HttpsError('failed-precondition', 'Invitation is no longer pending');
+        }
+        // Get the app URL from environment or use default
+        const appUrl = process.env.APP_URL || 'https://delphi-healthcare.vercel.app';
+        const invitationUrl = `${appUrl}/invitations/${invitation.token}`;
+        // Prepare email content
+        const emailContent = {
+            to: invitation.email,
+            from: {
+                email: process.env.SENDGRID_FROM_EMAIL || 'noreply@delphi-healthcare.com',
+                name: 'Delphi Healthcare Platform'
+            },
+            subject: `Invitation to join ${invitation.panelName} as an Expert`,
+            html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .button { display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; font-size: 14px; color: #6b7280; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Delphi Healthcare Platform</h1>
+            </div>
+            <div class="content">
+              <h2>You're Invited to Join as an Expert</h2>
+              
+              <p>Dear Expert,</p>
+              
+              <p>${invitation.invitedByName || 'A panel administrator'} has invited you to join the <strong>${invitation.panelName}</strong> panel as an expert contributor.</p>
+              
+              ${invitation.message ? `
+                <p><strong>Personal message:</strong></p>
+                <p style="background-color: white; padding: 15px; border-left: 4px solid #2563eb; margin: 20px 0;">
+                  ${invitation.message}
+                </p>
+              ` : ''}
+              
+              <p>As an expert panel member, you will:</p>
+              <ul>
+                <li>Provide anonymous feedback on important healthcare initiatives</li>
+                <li>Participate in structured rounds of discussion</li>
+                <li>Help reach consensus on critical decisions</li>
+                <li>Contribute your expertise to improve healthcare outcomes</li>
+              </ul>
+              
+              <p style="text-align: center;">
+                <a href="${invitationUrl}" class="button">Accept Invitation</a>
+              </p>
+              
+              <p style="font-size: 14px; color: #6b7280;">
+                This invitation will expire in 7 days. If you have any questions, please contact the panel administrator.
+              </p>
+            </div>
+            <div class="footer">
+              <p>This is an automated email from Delphi Healthcare Platform.<br>
+              Please do not reply to this email.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+            text: `
+        You're Invited to Join ${invitation.panelName} as an Expert
+        
+        Dear Expert,
+        
+        ${invitation.invitedByName || 'A panel administrator'} has invited you to join the ${invitation.panelName} panel as an expert contributor.
+        
+        ${invitation.message ? `Personal message: ${invitation.message}` : ''}
+        
+        As an expert panel member, you will:
+        - Provide anonymous feedback on important healthcare initiatives
+        - Participate in structured rounds of discussion
+        - Help reach consensus on critical decisions
+        - Contribute your expertise to improve healthcare outcomes
+        
+        Accept your invitation here: ${invitationUrl}
+        
+        This invitation will expire in 7 days.
+        
+        This is an automated email from Delphi Healthcare Platform.
+      `
+        };
+        // Send email
+        await mail_1.default.send(emailContent);
+        console.log('Email sent successfully to:', invitation.email);
+        return { success: true, message: 'Invitation email sent successfully' };
+    }
+    catch (error) {
+        console.error('Error sending invitation email:', error);
+        console.error('Error details:', error.message, (_b = error.response) === null || _b === void 0 ? void 0 : _b.body);
+        throw new functions.https.HttpsError('internal', error.message || 'Failed to send invitation email');
+    }
 });
 //# sourceMappingURL=index.js.map

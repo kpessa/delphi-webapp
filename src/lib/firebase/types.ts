@@ -105,6 +105,25 @@ export interface Round {
   endDate?: Date;
 }
 
+// Invitation Types
+export interface PanelInvitation {
+  id?: string;
+  panelId: string;
+  panelName: string;
+  email: string;
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  invitedBy: string;
+  invitedByName?: string;
+  token: string; // Unique token for invitation link
+  message?: string; // Custom message from inviter
+  expertId?: string; // Set when invitation is accepted
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt: Date;
+  acceptedAt?: Date;
+  declinedAt?: Date;
+}
+
 // AI Extraction Types
 export interface ExtractTopicRequest {
   rawText: string;

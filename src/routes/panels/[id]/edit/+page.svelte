@@ -42,7 +42,13 @@
 				return;
 			}
 
-			if (!isAdmin && authStore.user && !panel.adminIds.includes(authStore.user.uid)) {
+			// Check admin status after panel is loaded
+			const userIsAdmin = authStore.user && (
+				panel.adminIds?.includes(authStore.user.uid) || 
+				panel.creatorId === authStore.user.uid
+			);
+
+			if (!userIsAdmin) {
 				goto(`/panels/${panelId}`);
 				return;
 			}
