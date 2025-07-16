@@ -40,7 +40,8 @@ This is a Delphi technique web application built with Svelte 5, SvelteKit, Fireb
 - Test responsive design on mobile and desktop
 
 ### Git & Commit Guidelines
-- **Do not reference Claude Code in commit messages** - Keep commit messages professional and tool-agnostic
+- **Do not reference Claude Code in commit messages or pull requests** - Keep commit messages professional and tool-agnostic
+-- ** DO NOT reference Co-Authored-By: Claude <noreply@anthropic.com> in commits or pull requests
 - Use conventional commit format: `feat:`, `fix:`, `docs:`, `refactor:`, etc.
 - Write clear, descriptive commit messages that explain the "what" and "why"
 - Commit related changes together in logical units
