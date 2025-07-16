@@ -6,8 +6,12 @@
 </script>
 
 <ModeWatcher />
-<Navigation />
-<main class="flex-1">
-  <slot />
-</main>
+<div class="min-h-screen flex flex-col">
+  <Navigation />
+  <main class="flex-1">
+    <div class="container">
+      <slot />
+    </div>
+  </main>
+</div>
 <Toaster position="top-right" />

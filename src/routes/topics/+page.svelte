@@ -61,33 +61,29 @@
 	<title>Topics - Delphi Platform</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-50">
-	<header class="bg-white shadow">
-		<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-			<div class="flex items-center justify-between">
-				<div>
-					<h1 class="text-3xl font-bold text-gray-900">Topics</h1>
-					<p class="mt-1 text-sm text-gray-600">
-						Manage discussion topics for expert panels using the Delphi method
-					</p>
-				</div>
-				<Button href="/topics/new" class="flex items-center gap-2">
-					<Plus class="h-4 w-4" />
-					Create Topic
-				</Button>
-			</div>
+<div class="py-8">
+	<div class="flex items-center justify-between mb-6">
+		<div>
+			<h1 class="text-3xl font-bold">Topics</h1>
+			<p class="mt-1 text-sm text-muted-foreground">
+				Manage discussion topics for expert panels using the Delphi method
+			</p>
 		</div>
-	</header>
+		<Button href="/topics/new" class="flex items-center gap-2">
+			<Plus class="h-4 w-4" />
+			Create Topic
+		</Button>
+	</div>
 
-	<main class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+	<div>
 		{#if loading}
 			<div class="flex items-center justify-center py-12">
 				<p class="text-gray-500">Loading topics...</p>
 			</div>
 		{:else if topics.length === 0}
-			<div class="rounded-lg bg-white p-8 text-center shadow">
-				<h3 class="text-lg font-medium text-gray-900">No topics yet</h3>
-				<p class="mt-2 text-sm text-gray-500">
+			<div class="rounded-lg bg-card p-8 text-center shadow-sm border">
+				<h3 class="text-lg font-medium">No topics yet</h3>
+				<p class="mt-2 text-sm text-muted-foreground">
 					Get started by creating your first topic for expert discussion.
 				</p>
 				<Button href="/topics/new" class="mt-4">
@@ -95,7 +91,7 @@
 				</Button>
 			</div>
 		{:else}
-			<div class="rounded-lg bg-white shadow">
+			<div class="rounded-lg bg-card shadow-sm border">
 				<Table>
 					<TableCaption>A list of your Delphi method topics</TableCaption>
 					<TableHeader>
@@ -167,5 +163,5 @@
 				</Table>
 			</div>
 		{/if}
-	</main>
+	</div>
 </div>
