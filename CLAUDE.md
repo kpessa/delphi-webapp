@@ -39,6 +39,12 @@ This is a Delphi technique web application built with Svelte 5, SvelteKit, Fireb
 - Ensure no TypeScript errors before considering a feature complete
 - Test responsive design on mobile and desktop
 
+### Git & Commit Guidelines
+- **Do not reference Claude Code in commit messages** - Keep commit messages professional and tool-agnostic
+- Use conventional commit format: `feat:`, `fix:`, `docs:`, `refactor:`, etc.
+- Write clear, descriptive commit messages that explain the "what" and "why"
+- Commit related changes together in logical units
+
 ### Project Structure
 - UI components go in `src/lib/components/ui/`
 - Firebase services go in `src/lib/firebase/`
