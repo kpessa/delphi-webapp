@@ -12,9 +12,12 @@ import {
 	orderBy,
 	serverTimestamp,
 	arrayUnion,
-	arrayRemove
+	arrayRemove,
+	onSnapshot,
+	type Unsubscribe
 } from 'firebase/firestore';
 import type { Panel } from './types';
+import { browser } from '$app/environment';
 
 const PANELS_COLLECTION = 'panels';
 
@@ -107,6 +110,35 @@ export async function getPanelsByCreator(creatorId: string): Promise<Panel[]> {
 
 export async function getActivePanels(): Promise<Panel[]> {
 	return getPanels({ status: 'active' });
+}
+
+export function subscribePanel(
+  panelId: string,
+  callback: (panel: Panel | null) => void
+): Unsubscribe {
+  if (!browser) {
+    callback(null);
+    return () => {};
+  }
+
+  const docRef = doc(db, PANELS_COLLECTION, panelId);
+  
+  return onSnapshot(docRef, (doc) => {
+    if (doc.exists()) {
+      const data = doc.data();
+      callback({
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt.toDate(),
+        updatedAt: data.updatedAt.toDate()
+      } as Panel);
+    } else {
+      callback(null);
+    }
+  }, (error) => {
+    console.error('Error subscribing to panel:', error);
+    callback(null);
+  });
 }
 
 export async function addExpertToPanel(panelId: string, expertId: string): Promise<void> {

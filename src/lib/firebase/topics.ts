@@ -13,9 +13,12 @@ import {
 	serverTimestamp,
 	type QueryConstraint,
 	limit,
-	Timestamp
+	Timestamp,
+	onSnapshot,
+	type Unsubscribe
 } from 'firebase/firestore';
 import type { Topic } from './types';
+import { browser } from '$app/environment';
 
 const TOPICS_COLLECTION = 'topics';
 
@@ -74,17 +77,42 @@ export async function getTopic(id: string): Promise<Topic | null> {
 	} as Topic;
 }
 
+export function subscribeTopic(
+  topicId: string,
+  callback: (topic: Topic | null) => void
+): Unsubscribe {
+  if (!browser) {
+    callback(null);
+    return () => {};
+  }
+
+  const docRef = doc(db, TOPICS_COLLECTION, topicId);
+  
+  return onSnapshot(docRef, (doc) => {
+    if (doc.exists()) {
+      const data = doc.data();
+      callback({
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt.toDate(),
+        updatedAt: data.updatedAt.toDate()
+      } as Topic);
+    } else {
+      callback(null);
+    }
+  }, (error) => {
+    console.error('Error subscribing to topic:', error);
+    callback(null);
+  });
+}
+
 export async function getTopics(filters?: {
-	panelId?: string;
 	creatorId?: string;
 	status?: Topic['status'];
+	panelId?: string;
 	limit?: number;
 }): Promise<Topic[]> {
 	const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
-
-	if (filters?.panelId) {
-		constraints.push(where('panelId', '==', filters.panelId));
-	}
 
 	if (filters?.creatorId) {
 		constraints.push(where('creatorId', '==', filters.creatorId));
@@ -92,6 +120,10 @@ export async function getTopics(filters?: {
 
 	if (filters?.status) {
 		constraints.push(where('status', '==', filters.status));
+	}
+
+	if (filters?.panelId) {
+		constraints.push(where('panelId', '==', filters.panelId));
 	}
 
 	if (filters?.limit) {
@@ -112,14 +144,14 @@ export async function getTopics(filters?: {
 	});
 }
 
-export async function getTopicsByPanel(panelId: string): Promise<Topic[]> {
-	return getTopics({ panelId });
-}
-
 export async function getTopicsByCreator(creatorId: string): Promise<Topic[]> {
 	return getTopics({ creatorId });
 }
 
 export async function getActiveTopics(): Promise<Topic[]> {
 	return getTopics({ status: 'active' });
+}
+
+export async function getTopicsByPanel(panelId: string): Promise<Topic[]> {
+	return getTopics({ panelId });
 }

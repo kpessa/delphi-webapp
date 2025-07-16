@@ -31,8 +31,8 @@ export interface Feedback {
   roundNumber: number;
   type: FeedbackType;
   content: string;
-  voteCount: number;
-  votedBy: string[]; // Track who voted (hidden from UI)
+  upvotes: string[]; // Array of user IDs who upvoted
+  downvotes: string[]; // Array of user IDs who downvoted
   parentId?: string | null; // For threading refinements
   metadata?: {
     reasoning?: string;

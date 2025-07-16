@@ -10,9 +10,12 @@ import {
 	query,
 	where,
 	orderBy,
-	serverTimestamp
+	serverTimestamp,
+	onSnapshot,
+	type Unsubscribe
 } from 'firebase/firestore';
 import type { Expert } from './types';
+import { browser } from '$app/environment';
 
 const EXPERTS_COLLECTION = 'experts';
 
@@ -115,6 +118,67 @@ export async function getExpertsByPanel(panelId: string): Promise<Expert[]> {
 
 export async function getExpertsByUser(userId: string): Promise<Expert[]> {
 	return getExperts({ userId });
+}
+
+export async function getExpertByUserId(userId: string): Promise<Expert | null> {
+  if (!browser) return null;
+  
+  try {
+    const q = query(
+      collection(db, EXPERTS_COLLECTION),
+      where('userId', '==', userId)
+    );
+    const snapshot = await getDocs(q);
+    
+    if (!snapshot.empty) {
+      const doc = snapshot.docs[0];
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        invitedAt: data.invitedAt.toDate(),
+        acceptedAt: data.acceptedAt?.toDate(),
+        createdAt: data.createdAt.toDate(),
+        updatedAt: data.updatedAt.toDate()
+      } as Expert;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching expert by user ID:', error);
+    return null;
+  }
+}
+
+export function subscribeExpert(
+  expertId: string,
+  callback: (expert: Expert | null) => void
+): Unsubscribe {
+  if (!browser) {
+    callback(null);
+    return () => {};
+  }
+
+  const docRef = doc(db, EXPERTS_COLLECTION, expertId);
+  
+  return onSnapshot(docRef, (doc) => {
+    if (doc.exists()) {
+      const data = doc.data();
+      callback({
+        id: doc.id,
+        ...data,
+        invitedAt: data.invitedAt.toDate(),
+        acceptedAt: data.acceptedAt?.toDate(),
+        createdAt: data.createdAt.toDate(),
+        updatedAt: data.updatedAt.toDate()
+      } as Expert);
+    } else {
+      callback(null);
+    }
+  }, (error) => {
+    console.error('Error subscribing to expert:', error);
+    callback(null);
+  });
 }
 
 export async function acceptExpertInvitation(expertId: string): Promise<void> {

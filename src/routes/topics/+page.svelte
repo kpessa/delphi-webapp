@@ -49,8 +49,9 @@
 
 	function getStatusBadgeVariant(status: string) {
 		const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-			open: 'default',
-			closed: 'secondary'
+			draft: 'secondary',
+			active: 'default',
+			completed: 'outline'
 		};
 		return variants[status] || 'secondary';
 	}
