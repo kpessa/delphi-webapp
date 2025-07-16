@@ -98,6 +98,8 @@ firebase deploy --only firestore:rules
 - `app.url`: Your application's URL for invitation links
 - `openai.api_key`: (Optional) OpenAI API key for AI features
 
+**Important**: Do NOT use .env files in the functions directory. Always use `firebase functions:config:set` for production configuration.
+
 ## Troubleshooting
 
 ### Invitations not sending
@@ -121,9 +123,11 @@ firebase deploy --only firestore:rules
 
 1. **API Keys**: Never commit API keys to version control
 2. **Email Validation**: The system validates email formats before sending
-3. **Rate Limiting**: Consider implementing rate limiting for bulk invitations
+3. **Rate Limiting**: Built-in limit of 50 invitations per panel per hour
 4. **Expiration**: Invitations expire after 7 days for security
 5. **Authentication**: Only panel admins can send invitations
+6. **Access Control**: Invitations can only be read by panel admins and recipients
+7. **Password Requirements**: Minimum 8 characters with complexity requirements
 
 ## Monitoring
 

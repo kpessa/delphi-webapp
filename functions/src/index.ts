@@ -8,14 +8,17 @@ import type { ExtractTopicRequest, ExtractTopicResponse, FeedbackType, PanelInvi
 // Initialize Firebase Admin
 admin.initializeApp();
 
+// Get configuration
+const config = functions.config();
+
 // Initialize OpenAI
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const openai = config.openai?.api_key ? new OpenAI({
+  apiKey: config.openai.api_key,
 }) : null;
 
 // Initialize SendGrid
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+if (config.sendgrid?.api_key) {
+  sgMail.setApiKey(config.sendgrid.api_key);
 }
 
 // Enable CORS
@@ -194,8 +197,8 @@ export const sendInvitationEmail = functions.https.onCall(async (data: any, cont
   }
 
   // Check if SendGrid is configured
-  if (!process.env.SENDGRID_API_KEY) {
-    console.error('SendGrid API key not found in environment');
+  if (!config.sendgrid?.api_key) {
+    console.error('SendGrid API key not found in config');
     throw new functions.https.HttpsError('failed-precondition', 'SendGrid is not configured');
   }
 
@@ -223,15 +226,15 @@ export const sendInvitationEmail = functions.https.onCall(async (data: any, cont
       throw new functions.https.HttpsError('failed-precondition', 'Invitation is no longer pending');
     }
 
-    // Get the app URL from environment or use default
-    const appUrl = process.env.APP_URL || 'https://delphi-healthcare.vercel.app';
+    // Get the app URL from config or use default
+    const appUrl = config.app?.url || 'https://delphi-healthcare.vercel.app';
     const invitationUrl = `${appUrl}/invitations/${invitation.token}`;
 
     // Prepare email content
     const emailContent = {
       to: invitation.email,
       from: {
-        email: process.env.SENDGRID_FROM_EMAIL || 'noreply@delphi-healthcare.com',
+        email: config.sendgrid?.from_email || 'noreply@delphi-healthcare.com',
         name: 'Delphi Healthcare Platform'
       },
       subject: `Invitation to join ${invitation.panelName} as an Expert`,

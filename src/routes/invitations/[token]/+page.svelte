@@ -83,8 +83,19 @@
 					return;
 				}
 				
-				if (password.length < 6) {
-					error = 'Password must be at least 6 characters';
+				if (password.length < 8) {
+					error = 'Password must be at least 8 characters';
+					return;
+				}
+				
+				// Check password complexity
+				const hasUpperCase = /[A-Z]/.test(password);
+				const hasLowerCase = /[a-z]/.test(password);
+				const hasNumbers = /\d/.test(password);
+				const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+				
+				if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
+					error = 'Password must contain uppercase, lowercase, numbers, and special characters';
 					return;
 				}
 				
@@ -306,6 +317,9 @@
 												placeholder="Create a password"
 												disabled={processing}
 											/>
+											<p class="text-xs text-gray-500 mt-1">
+												Minimum 8 characters with uppercase, lowercase, numbers, and special characters
+											</p>
 										</div>
 										
 										<div>

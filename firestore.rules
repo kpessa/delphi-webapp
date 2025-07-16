@@ -149,8 +149,17 @@ service cloud.firestore {
     
     // Panel invitations collection (LEGACY - keep for backward compatibility)
     match /panelInvitations/{invitationId} {
-      // Allow read if user is authenticated
-      allow read: if isAuthenticated();
+      // Allow read if user is authenticated AND either:
+      // - User is admin of the panel
+      // - User's email matches the invitation email
+      // - User created the invitation
+      allow read: if isAuthenticated() && (
+        (exists(/databases/$(database)/documents/panels/$(resource.data.panelId)) &&
+         request.auth.uid in get(/databases/$(database)/documents/panels/$(resource.data.panelId)).data.adminIds) ||
+        (request.auth.token.email != null && 
+         request.auth.token.email == resource.data.email) ||
+        request.auth.uid == resource.data.invitedBy
+      );
       
       // Allow create if user is admin of the panel being invited to
       allow create: if isAuthenticated() && 

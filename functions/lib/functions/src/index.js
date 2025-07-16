@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
+var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendInvitationEmail = exports.generateRoundSummary = exports.extractTopic = void 0;
 const functions = __importStar(require("firebase-functions"));
@@ -44,13 +45,15 @@ const mail_1 = __importDefault(require("@sendgrid/mail"));
 const cors_1 = __importDefault(require("cors"));
 // Initialize Firebase Admin
 admin.initializeApp();
+// Get configuration
+const config = functions.config();
 // Initialize OpenAI
-const openai = process.env.OPENAI_API_KEY ? new openai_1.default({
-    apiKey: process.env.OPENAI_API_KEY,
+const openai = ((_a = config.openai) === null || _a === void 0 ? void 0 : _a.api_key) ? new openai_1.default({
+    apiKey: config.openai.api_key,
 }) : null;
 // Initialize SendGrid
-if (process.env.SENDGRID_API_KEY) {
-    mail_1.default.setApiKey(process.env.SENDGRID_API_KEY);
+if ((_b = config.sendgrid) === null || _b === void 0 ? void 0 : _b.api_key) {
+    mail_1.default.setApiKey(config.sendgrid.api_key);
 }
 // Enable CORS
 const corsHandler = (0, cors_1.default)({ origin: true });
@@ -196,7 +199,7 @@ exports.generateRoundSummary = functions.https.onRequest(async (req, res) => {
 });
 // Function to send invitation emails (v1)
 exports.sendInvitationEmail = functions.https.onCall(async (data, context) => {
-    var _a, _b;
+    var _a, _b, _c, _d, _e;
     console.log('sendInvitationEmail called with data:', data);
     console.log('Auth context:', (_a = context.auth) === null || _a === void 0 ? void 0 : _a.uid);
     // Verify authentication
@@ -205,8 +208,8 @@ exports.sendInvitationEmail = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError('unauthenticated', 'Must be authenticated to send invitations');
     }
     // Check if SendGrid is configured
-    if (!process.env.SENDGRID_API_KEY) {
-        console.error('SendGrid API key not found in environment');
+    if (!((_b = config.sendgrid) === null || _b === void 0 ? void 0 : _b.api_key)) {
+        console.error('SendGrid API key not found in config');
         throw new functions.https.HttpsError('failed-precondition', 'SendGrid is not configured');
     }
     const { invitationId } = data;
@@ -227,14 +230,14 @@ exports.sendInvitationEmail = functions.https.onCall(async (data, context) => {
         if (invitation.status !== 'pending') {
             throw new functions.https.HttpsError('failed-precondition', 'Invitation is no longer pending');
         }
-        // Get the app URL from environment or use default
-        const appUrl = process.env.APP_URL || 'https://delphi-healthcare.vercel.app';
+        // Get the app URL from config or use default
+        const appUrl = ((_c = config.app) === null || _c === void 0 ? void 0 : _c.url) || 'https://delphi-healthcare.vercel.app';
         const invitationUrl = `${appUrl}/invitations/${invitation.token}`;
         // Prepare email content
         const emailContent = {
             to: invitation.email,
             from: {
-                email: process.env.SENDGRID_FROM_EMAIL || 'noreply@delphi-healthcare.com',
+                email: ((_d = config.sendgrid) === null || _d === void 0 ? void 0 : _d.from_email) || 'noreply@delphi-healthcare.com',
                 name: 'Delphi Healthcare Platform'
             },
             subject: `Invitation to join ${invitation.panelName} as an Expert`,
@@ -323,7 +326,7 @@ exports.sendInvitationEmail = functions.https.onCall(async (data, context) => {
     }
     catch (error) {
         console.error('Error sending invitation email:', error);
-        console.error('Error details:', error.message, (_b = error.response) === null || _b === void 0 ? void 0 : _b.body);
+        console.error('Error details:', error.message, (_e = error.response) === null || _e === void 0 ? void 0 : _e.body);
         throw new functions.https.HttpsError('internal', error.message || 'Failed to send invitation email');
     }
 });

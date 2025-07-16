@@ -85,6 +85,50 @@ export async function sendBulkInvitations(
   const sent: string[] = [];
   const failed: string[] = [];
   
+  // Rate limiting: Check recent invitations from this panel
+  const oneHourAgo = new Date();
+  oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+  
+  const recentInvitationsQuery = query(
+    collection(db, INVITATIONS_COLLECTION),
+    where('panelId', '==', panelId),
+    where('createdAt', '>=', Timestamp.fromDate(oneHourAgo))
+  );
+  
+  const recentInvitations = await getDocs(recentInvitationsQuery);
+  const recentCount = recentInvitations.size;
+  
+  // Allow max 50 invitations per hour per panel
+  const maxPerHour = 50;
+  const remainingSlots = maxPerHour - recentCount;
+  
+  if (remainingSlots <= 0) {
+    throw new Error(`Rate limit exceeded. You can send up to ${maxPerHour} invitations per hour per panel.`);
+  }
+  
+  // Limit the batch to remaining slots
+  if (emails.length > remainingSlots) {
+    failed.push(...emails.slice(remainingSlots).map(email => 
+      `${email} (rate limit - only ${remainingSlots} invitations remaining this hour)`
+    ));
+    emails = emails.slice(0, remainingSlots);
+  }
+  
+  // Email validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  // Filter out invalid emails
+  const validEmails: string[] = [];
+  emails.forEach(email => {
+    if (!emailRegex.test(email)) {
+      failed.push(`${email} (invalid email format)`);
+    } else {
+      validEmails.push(email);
+    }
+  });
+  
+  emails = validEmails;
+  
   // Check for existing active invitations
   const existingInvitationsQuery = query(
     collection(db, INVITATIONS_COLLECTION),
