@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import ThemeToggle from '$lib/components/theme-toggle.svelte';
+	import NotificationBell from '$lib/components/notifications/NotificationBell.svelte';
 	import { authStore } from '$lib/stores/auth.svelte';
 	import { logOut } from '$lib/firebase/auth';
 	import { goto } from '$app/navigation';
@@ -79,6 +80,7 @@
 			<ThemeToggle />
 			
 			{#if authStore.isAuthenticated}
+				<NotificationBell />
 				<Button on:click={handleLogout} variant="ghost" size="sm" class="hidden md:inline-flex">
 					Sign Out
 				</Button>
