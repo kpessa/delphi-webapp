@@ -29,3 +29,27 @@ pglite-debug.log
 # Windows Zone.Identifier files
 *Zone.Identifier
 functions/.runtimeconfig.json
+
+# Added by auto-ignore sweep
+node_modules/
+.next/
+.svelte-kit/
+dist/
+build/
+.env.local
+.env.*.local
+.vscode/
+.idea/
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.turbo/
+.vercel/
+.cache/
+.parcel-cache/
+coverage/
+.nyc_output/
